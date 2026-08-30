@@ -1,0 +1,1382 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Plataforma TPT — Transferencia al Puesto de Trabajo</title>
+  <meta name="description" content="Plataforma digital que mide el impacto real de tus programas de desarrollo de liderazgo. Evaluaciones PRE/POST, seguimiento de jefaturas e informes con inteligencia artificial.">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap">
+
+  <style>
+    :root {
+      --bg-deep: #0F1923;
+      --bg-surface: #1B2D3E;
+      --bg-elevated: #25394D;
+      --accent: #E87A2E;
+      --accent-glow: rgba(232, 122, 46, 0.15);
+      --accent-gold: #D4A03C;
+      --text-primary: #E8E4DF;
+      --text-secondary: #8A9BAD;
+      --text-muted: #5A6B7D;
+      --border: rgba(138, 155, 173, 0.15);
+      --font-display: 'DM Serif Display', Georgia, 'Times New Roman', serif;
+      --font-body: 'Inter', -apple-system, system-ui, sans-serif;
+      --font-mono: 'JetBrains Mono', 'Courier New', monospace;
+    }
+
+    @media (prefers-color-scheme: light) {
+      :root:not([data-theme="dark"]) {
+        --bg-deep: #F5F2EE;
+        --bg-surface: #FFFFFF;
+        --bg-elevated: #EDE9E3;
+        --accent: #D06820;
+        --accent-glow: rgba(208, 104, 32, 0.08);
+        --accent-gold: #B8891F;
+        --text-primary: #1A2233;
+        --text-secondary: #5A6577;
+        --text-muted: #8A94A4;
+        --border: rgba(26, 34, 51, 0.1);
+      }
+    }
+
+    :root[data-theme="light"] {
+      --bg-deep: #F5F2EE;
+      --bg-surface: #FFFFFF;
+      --bg-elevated: #EDE9E3;
+      --accent: #D06820;
+      --accent-glow: rgba(208, 104, 32, 0.08);
+      --accent-gold: #B8891F;
+      --text-primary: #1A2233;
+      --text-secondary: #5A6577;
+      --text-muted: #8A94A4;
+      --border: rgba(26, 34, 51, 0.1);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg-deep);
+      color: var(--text-primary);
+      font-family: var(--font-body);
+      font-size: 16px;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+
+    .container {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    /* NAV */
+    nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      padding: 16px 0;
+      background: transparent;
+      transition: background 0.3s, box-shadow 0.3s;
+    }
+
+    nav.scrolled {
+      background: var(--bg-deep);
+      box-shadow: 0 1px 0 var(--border);
+    }
+
+    nav .container {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .nav-logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+      color: var(--text-primary);
+    }
+
+    .nav-logo-mark {
+      width: 36px;
+      height: 36px;
+    }
+
+    .nav-logo span {
+      font-family: var(--font-display);
+      font-size: 1.15rem;
+      letter-spacing: 0.02em;
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 32px;
+      list-style: none;
+    }
+
+    .nav-links a {
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 0.875rem;
+      font-weight: 500;
+      transition: color 0.2s;
+    }
+
+    .nav-links a:hover { color: var(--text-primary); }
+
+    .btn-cta {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      padding: 10px 24px;
+      border-radius: 8px;
+      font-family: var(--font-body);
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+
+    .btn-cta:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 8px 24px var(--accent-glow);
+    }
+
+    .btn-cta:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+
+    .btn-outline {
+      background: transparent;
+      color: var(--text-primary);
+      border: 1px solid var(--border);
+      padding: 10px 24px;
+      border-radius: 8px;
+      font-family: var(--font-body);
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      transition: border-color 0.2s, background 0.2s;
+    }
+
+    .btn-outline:hover {
+      border-color: var(--text-muted);
+      background: var(--accent-glow);
+    }
+
+    .btn-outline:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+
+    /* HERO */
+    .hero {
+      padding: 140px 0 80px;
+      position: relative;
+    }
+
+    .hero-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 64px;
+      align-items: center;
+    }
+
+    .hero-eyebrow {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      font-weight: 500;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+      margin-bottom: 20px;
+    }
+
+    .hero h1 {
+      font-family: var(--font-display);
+      font-size: clamp(2.25rem, 4vw, 3.25rem);
+      line-height: 1.15;
+      text-wrap: balance;
+      margin-bottom: 24px;
+      color: var(--text-primary);
+    }
+
+    .hero h1 em {
+      font-style: italic;
+      color: var(--accent);
+    }
+
+    .hero-sub {
+      font-size: 1.125rem;
+      color: var(--text-secondary);
+      max-width: 480px;
+      margin-bottom: 36px;
+      line-height: 1.7;
+    }
+
+    .hero-actions {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+    }
+
+    .hero-mockup { position: relative; }
+
+    .mockup-window {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 24px 80px rgba(0,0,0,0.25);
+    }
+
+    .mockup-titlebar {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 12px 16px;
+      background: var(--bg-elevated);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .mockup-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--text-muted);
+      opacity: 0.4;
+    }
+
+    .mockup-body { padding: 24px; }
+
+    .mockup-dashboard {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .mockup-kpi {
+      background: var(--bg-elevated);
+      border-radius: 8px;
+      padding: 14px;
+    }
+
+    .mockup-kpi-label {
+      font-size: 0.625rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+
+    .mockup-kpi-value {
+      font-family: var(--font-mono);
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--accent);
+    }
+
+    .mockup-kpi-value.gold { color: var(--accent-gold); }
+    .mockup-kpi-value.primary { color: var(--text-primary); }
+
+    .mockup-chart {
+      background: var(--bg-elevated);
+      border-radius: 8px;
+      padding: 16px;
+      height: 120px;
+      overflow: hidden;
+    }
+
+    .mockup-chart-label {
+      font-size: 0.625rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+
+    .chart-bars {
+      display: flex;
+      align-items: flex-end;
+      gap: 6px;
+      height: 70px;
+      padding-top: 8px;
+    }
+
+    .chart-bar-group {
+      display: flex;
+      gap: 3px;
+      flex: 1;
+      align-items: flex-end;
+    }
+
+    .chart-bar {
+      flex: 1;
+      border-radius: 3px 3px 0 0;
+      min-width: 12px;
+    }
+
+    .chart-bar.pre { background: var(--text-muted); opacity: 0.5; }
+    .chart-bar.post { background: var(--accent); }
+
+    /* STATS STRIP */
+    .stats-strip {
+      padding: 56px 0;
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 32px;
+      text-align: center;
+    }
+
+    .stat-number {
+      font-family: var(--font-mono);
+      font-size: 2.5rem;
+      font-weight: 700;
+      color: var(--accent);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .stat-label {
+      font-size: 0.875rem;
+      color: var(--text-secondary);
+      margin-top: 4px;
+    }
+
+    /* SECTION SHARED */
+    section { padding: 80px 0; }
+
+    .section-eyebrow {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      font-weight: 500;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+      margin-bottom: 16px;
+    }
+
+    .section-title {
+      font-family: var(--font-display);
+      font-size: clamp(1.75rem, 3vw, 2.5rem);
+      line-height: 1.2;
+      text-wrap: balance;
+      margin-bottom: 16px;
+      color: var(--text-primary);
+    }
+
+    .section-sub {
+      font-size: 1.0625rem;
+      color: var(--text-secondary);
+      max-width: 560px;
+      line-height: 1.7;
+    }
+
+    /* PROBLEM SECTION */
+    .problem { border-bottom: 1px solid var(--border); }
+
+    .problem-grid {
+      display: grid;
+      grid-template-columns: 5fr 7fr;
+      gap: 80px;
+      align-items: start;
+    }
+
+    .pain-cards {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .pain-card {
+      display: flex;
+      gap: 16px;
+      padding: 20px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      transition: border-color 0.2s;
+    }
+
+    .pain-card:hover { border-color: var(--accent); }
+
+    .pain-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 8px;
+      background: var(--accent-glow);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-size: 1.125rem;
+    }
+
+    .pain-card h4 {
+      font-size: 0.9375rem;
+      font-weight: 600;
+      margin-bottom: 4px;
+      color: var(--text-primary);
+    }
+
+    .pain-card p {
+      font-size: 0.8125rem;
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+
+    /* FEATURES */
+    .features { border-bottom: 1px solid var(--border); }
+    .features-header { margin-bottom: 64px; }
+
+    .feature-rows {
+      display: flex;
+      flex-direction: column;
+      gap: 80px;
+    }
+
+    .feature-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 64px;
+      align-items: center;
+    }
+
+    .feature-row.reverse .feature-visual { order: -1; }
+
+    .feature-tag {
+      display: inline-block;
+      font-family: var(--font-mono);
+      font-size: 0.6875rem;
+      font-weight: 500;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      padding: 4px 10px;
+      background: var(--accent-glow);
+      border-radius: 4px;
+      margin-bottom: 16px;
+    }
+
+    .feature-row h3 {
+      font-family: var(--font-display);
+      font-size: 1.625rem;
+      line-height: 1.25;
+      margin-bottom: 16px;
+      color: var(--text-primary);
+    }
+
+    .feature-row p {
+      font-size: 0.9375rem;
+      color: var(--text-secondary);
+      line-height: 1.7;
+      margin-bottom: 20px;
+    }
+
+    .feature-bullets {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .feature-bullets li {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      font-size: 0.875rem;
+      color: var(--text-secondary);
+    }
+
+    .feature-bullets li::before {
+      content: '';
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+      flex-shrink: 0;
+      margin-top: 7px;
+    }
+
+    .feature-visual {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 28px;
+      min-height: 280px;
+    }
+
+    .eval-flow {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .eval-step {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 14px 16px;
+      background: var(--bg-elevated);
+      border-radius: 8px;
+    }
+
+    .eval-step-num {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: #fff;
+      background: var(--accent);
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .eval-step-text {
+      font-size: 0.8125rem;
+      font-weight: 500;
+      color: var(--text-primary);
+    }
+
+    .eval-step-status {
+      margin-left: auto;
+      font-family: var(--font-mono);
+      font-size: 0.6875rem;
+      color: var(--accent-gold);
+    }
+
+    .eval-connector {
+      width: 1px;
+      height: 8px;
+      background: var(--accent);
+      opacity: 0.3;
+      margin-left: 28px;
+    }
+
+    .dash-mini-header {
+      font-size: 0.6875rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-muted);
+      margin-bottom: 16px;
+      font-weight: 500;
+    }
+
+    .dash-mini-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .dash-mini-row:last-child { border-bottom: none; }
+
+    .dash-mini-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--bg-elevated);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      flex-shrink: 0;
+    }
+
+    .dash-mini-name {
+      font-size: 0.8125rem;
+      font-weight: 500;
+      color: var(--text-primary);
+      flex: 1;
+    }
+
+    .dash-mini-bar-wrap {
+      width: 100px;
+      height: 6px;
+      background: var(--bg-elevated);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .dash-mini-bar {
+      height: 100%;
+      border-radius: 3px;
+      background: var(--accent);
+    }
+
+    .dash-mini-bar.gold { background: var(--accent-gold); }
+
+    .dash-mini-pct {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+      width: 36px;
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .ai-preview {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .ai-prompt {
+      background: var(--bg-elevated);
+      border-radius: 8px;
+      padding: 14px 16px;
+      font-size: 0.8125rem;
+      color: var(--text-secondary);
+      border-left: 3px solid var(--accent);
+    }
+
+    .ai-output {
+      background: var(--bg-elevated);
+      border-radius: 8px;
+      padding: 16px;
+    }
+
+    .ai-output-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .ai-badge {
+      font-family: var(--font-mono);
+      font-size: 0.625rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--accent);
+      background: var(--accent-glow);
+      padding: 3px 8px;
+      border-radius: 4px;
+    }
+
+    .ai-output-title {
+      font-size: 0.8125rem;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .ai-output-lines {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .ai-line {
+      height: 8px;
+      background: var(--border);
+      border-radius: 4px;
+    }
+
+    .ai-line:nth-child(1) { width: 92%; }
+    .ai-line:nth-child(2) { width: 78%; }
+    .ai-line:nth-child(3) { width: 85%; }
+    .ai-line:nth-child(4) { width: 60%; }
+
+    .ai-download {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-family: var(--font-mono);
+      font-size: 0.6875rem;
+      color: var(--accent);
+      margin-top: 4px;
+    }
+
+    /* ROLES */
+    .roles { border-bottom: 1px solid var(--border); }
+
+    .roles-header {
+      text-align: center;
+      margin-bottom: 64px;
+    }
+
+    .roles-header .section-sub { margin: 0 auto; }
+
+    .roles-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+    }
+
+    .role-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 32px 28px;
+      transition: border-color 0.2s, transform 0.15s;
+    }
+
+    .role-card:hover {
+      border-color: var(--accent);
+      transform: translateY(-2px);
+    }
+
+    .role-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 10px;
+      background: var(--accent-glow);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 20px;
+      font-size: 1.25rem;
+    }
+
+    .role-card h3 {
+      font-family: var(--font-display);
+      font-size: 1.25rem;
+      margin-bottom: 12px;
+      color: var(--text-primary);
+    }
+
+    .role-card p {
+      font-size: 0.875rem;
+      color: var(--text-secondary);
+      line-height: 1.6;
+      margin-bottom: 20px;
+    }
+
+    .role-features {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      border-top: 1px solid var(--border);
+      padding-top: 16px;
+    }
+
+    .role-features li {
+      font-size: 0.8125rem;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .role-features li::before {
+      content: '~';
+      font-family: var(--font-mono);
+      color: var(--accent);
+      font-weight: 700;
+    }
+
+    /* DEMO SECTION */
+    .demo-section {
+      padding: 80px 0;
+      background: var(--bg-surface);
+    }
+
+    .demo-header {
+      text-align: center;
+      margin-bottom: 48px;
+    }
+
+    .demo-roles {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+      align-items: start;
+    }
+
+    .demo-role-card {
+      background: var(--bg-deep);
+      border: 2px solid var(--border);
+      border-radius: 12px;
+      padding: 32px 28px;
+      cursor: pointer;
+      transition: border-color 0.2s, transform 0.15s, box-shadow 0.2s;
+      position: relative;
+    }
+
+    .demo-role-card:hover {
+      border-color: var(--accent);
+      transform: translateY(-3px);
+      box-shadow: 0 12px 40px rgba(0,0,0,0.2);
+    }
+
+    .demo-role-card.featured {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px var(--accent), 0 8px 32px var(--accent-glow);
+    }
+
+    .demo-featured-badge {
+      position: absolute;
+      top: -12px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--accent);
+      color: #fff;
+      font-family: var(--font-mono);
+      font-size: 0.6875rem;
+      font-weight: 700;
+      padding: 4px 16px;
+      border-radius: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      white-space: nowrap;
+    }
+
+    .demo-role-icon {
+      width: 56px;
+      height: 56px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 20px;
+    }
+
+    .admin-icon { background: rgba(59, 130, 246, 0.15); color: #3B82F6; }
+    .jefatura-icon { background: var(--accent-glow); color: var(--accent); }
+    .participante-icon { background: rgba(16, 185, 129, 0.15); color: #10B981; }
+
+    .demo-role-card h3 {
+      font-family: var(--font-display);
+      font-size: 1.25rem;
+      margin-bottom: 10px;
+      color: var(--text-primary);
+    }
+
+    .demo-role-card p {
+      font-size: 0.8125rem;
+      color: var(--text-secondary);
+      line-height: 1.6;
+      margin-bottom: 16px;
+    }
+
+    .demo-role-features {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 20px;
+    }
+
+    .demo-role-features span {
+      font-family: var(--font-mono);
+      font-size: 0.6875rem;
+      color: var(--text-muted);
+      background: var(--bg-elevated);
+      padding: 3px 10px;
+      border-radius: 4px;
+    }
+
+    .demo-role-btn {
+      display: block;
+      text-align: center;
+      padding: 10px;
+      border-radius: 8px;
+      font-size: 0.875rem;
+      font-weight: 600;
+      background: var(--bg-elevated);
+      color: var(--text-primary);
+      transition: background 0.2s, color 0.2s;
+    }
+
+    .demo-role-card:hover .demo-role-btn,
+    .demo-role-card.featured .demo-role-btn {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    /* CTA */
+    .cta-section {
+      text-align: center;
+      padding: 100px 0;
+    }
+
+    .cta-section .section-title {
+      max-width: 600px;
+      margin: 0 auto 16px;
+    }
+
+    .cta-section .section-sub {
+      max-width: 480px;
+      margin: 0 auto 40px;
+    }
+
+    .cta-actions {
+      display: flex;
+      justify-content: center;
+      gap: 16px;
+    }
+
+    /* FOOTER */
+    footer {
+      padding: 40px 0;
+      border-top: 1px solid var(--border);
+    }
+
+    .footer-inner {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .footer-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .footer-brand span {
+      font-family: var(--font-display);
+      font-size: 1rem;
+      color: var(--text-primary);
+    }
+
+    .footer-copy {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    /* RESPONSIVE */
+    @media (max-width: 900px) {
+      .hero-grid { grid-template-columns: 1fr; gap: 48px; }
+      .problem-grid { grid-template-columns: 1fr; gap: 48px; }
+      .feature-row { grid-template-columns: 1fr; gap: 40px; }
+      .feature-row.reverse .feature-visual { order: 0; }
+      .roles-grid { grid-template-columns: 1fr; }
+      .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 24px; }
+      .demo-roles { grid-template-columns: 1fr; max-width: 400px; margin: 0 auto; }
+      .nav-links { display: none; }
+    }
+
+    @media (max-width: 520px) {
+      .hero-actions { flex-direction: column; align-items: stretch; }
+      .btn-cta, .btn-outline { text-align: center; justify-content: center; }
+      .cta-actions { flex-direction: column; align-items: center; }
+      .stats-grid { grid-template-columns: 1fr 1fr; }
+      .footer-inner { flex-direction: column; gap: 16px; text-align: center; }
+      .mockup-dashboard { grid-template-columns: 1fr 1fr; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      * { transition-duration: 0.01ms !important; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- NAV -->
+  <nav id="nav">
+    <div class="container">
+      <a href="#" class="nav-logo">
+        <svg class="nav-logo-mark" viewBox="0 0 36 36" fill="none">
+          <circle cx="10" cy="22" r="8" fill="#7B2D8E" opacity="0.8"/>
+          <circle cx="18" cy="14" r="7" fill="#E87A2E"/>
+          <circle cx="26" cy="22" r="6" fill="#D4A03C" opacity="0.85"/>
+          <circle cx="30" cy="14" r="5" fill="#1B3A5C"/>
+        </svg>
+        <span>Procesos 360</span>
+      </a>
+      <ul class="nav-links">
+        <li><a href="#problema">El problema</a></li>
+        <li><a href="#funcionalidades">Funcionalidades</a></li>
+        <li><a href="#roles">Usuarios</a></li>
+        <li><a href="#demo" class="btn-cta">Probar demo</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="container">
+      <div class="hero-grid">
+        <div>
+          <div class="hero-eyebrow">Transferencia al puesto de trabajo</div>
+          <h1>Mide el impacto real de tus programas de <em>liderazgo</em></h1>
+          <p class="hero-sub">
+            Plataforma digital que acompa&ntilde;a a tus l&iacute;deres desde la capacitaci&oacute;n hasta la aplicaci&oacute;n concreta en su equipo. Evaluaciones PRE/POST, seguimiento de jefaturas e informes con inteligencia artificial.
+          </p>
+          <div class="hero-actions">
+            <a href="#demo" class="btn-cta">Probar la demo</a>
+            <a href="#funcionalidades" class="btn-outline">Ver funcionalidades</a>
+          </div>
+        </div>
+        <div class="hero-mockup">
+          <div class="mockup-window">
+            <div class="mockup-titlebar">
+              <div class="mockup-dot"></div>
+              <div class="mockup-dot"></div>
+              <div class="mockup-dot"></div>
+            </div>
+            <div class="mockup-body">
+              <div class="mockup-dashboard">
+                <div class="mockup-kpi">
+                  <div class="mockup-kpi-label">Participantes</div>
+                  <div class="mockup-kpi-value primary">24</div>
+                </div>
+                <div class="mockup-kpi">
+                  <div class="mockup-kpi-label">Tasa respuesta</div>
+                  <div class="mockup-kpi-value">87%</div>
+                </div>
+                <div class="mockup-kpi">
+                  <div class="mockup-kpi-label">Adopci&oacute;n</div>
+                  <div class="mockup-kpi-value gold">72%</div>
+                </div>
+              </div>
+              <div class="mockup-chart">
+                <div class="mockup-chart-label">Comparativo PRE vs POST</div>
+                <div class="chart-bars">
+                  <div class="chart-bar-group">
+                    <div class="chart-bar pre" style="height:35px;"></div>
+                    <div class="chart-bar post" style="height:55px;"></div>
+                  </div>
+                  <div class="chart-bar-group">
+                    <div class="chart-bar pre" style="height:28px;"></div>
+                    <div class="chart-bar post" style="height:50px;"></div>
+                  </div>
+                  <div class="chart-bar-group">
+                    <div class="chart-bar pre" style="height:40px;"></div>
+                    <div class="chart-bar post" style="height:58px;"></div>
+                  </div>
+                  <div class="chart-bar-group">
+                    <div class="chart-bar pre" style="height:32px;"></div>
+                    <div class="chart-bar post" style="height:48px;"></div>
+                  </div>
+                  <div class="chart-bar-group">
+                    <div class="chart-bar pre" style="height:38px;"></div>
+                    <div class="chart-bar post" style="height:62px;"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- STATS -->
+  <div class="stats-strip">
+    <div class="container">
+      <div class="stats-grid">
+        <div>
+          <div class="stat-number">+40%</div>
+          <div class="stat-label">Mejora promedio en adopci&oacute;n de conductas</div>
+        </div>
+        <div>
+          <div class="stat-number">3</div>
+          <div class="stat-label">Roles diferenciados en la plataforma</div>
+        </div>
+        <div>
+          <div class="stat-number">100%</div>
+          <div class="stat-label">Digital, sin papel ni planillas</div>
+        </div>
+        <div>
+          <div class="stat-number">&lt;5 min</div>
+          <div class="stat-label">Tiempo promedio de autoevaluaci&oacute;n</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PROBLEM -->
+  <section class="problem" id="problema">
+    <div class="container">
+      <div class="problem-grid">
+        <div>
+          <div class="section-eyebrow">El problema</div>
+          <h2 class="section-title">La capacitaci&oacute;n no falla en el aula. Falla despu&eacute;s.</h2>
+          <p class="section-sub">
+            La mayor&iacute;a de los programas de liderazgo terminan sin evidencia de que algo cambi&oacute;. Esta plataforma cierra esa brecha.
+          </p>
+        </div>
+        <div class="pain-cards">
+          <div class="pain-card">
+            <div class="pain-icon">&#x1F4CB;</div>
+            <div>
+              <h4>Sin medici&oacute;n de impacto</h4>
+              <p>Se invierte en formaci&oacute;n pero no se mide si los l&iacute;deres cambian sus conductas reales en el d&iacute;a a d&iacute;a.</p>
+            </div>
+          </div>
+          <div class="pain-card">
+            <div class="pain-icon">&#x1F4C9;</div>
+            <div>
+              <h4>Evaluaciones en papel o Excel</h4>
+              <p>Datos dispersos, dif&iacute;ciles de consolidar y sin trazabilidad. El informe final tarda semanas.</p>
+            </div>
+          </div>
+          <div class="pain-card">
+            <div class="pain-icon">&#x1F50D;</div>
+            <div>
+              <h4>Jefaturas desconectadas</h4>
+              <p>La jefatura directa no participa del proceso. Sin su mirada, la evaluaci&oacute;n queda incompleta.</p>
+            </div>
+          </div>
+          <div class="pain-card">
+            <div class="pain-icon">&#x23F3;</div>
+            <div>
+              <h4>Reportes manuales y lentos</h4>
+              <p>Armar informes ejecutivos consume horas de consultor&iacute;a que podr&iacute;an dedicarse a intervenir.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FEATURES -->
+  <section class="features" id="funcionalidades">
+    <div class="container">
+      <div class="features-header">
+        <div class="section-eyebrow">Funcionalidades</div>
+        <h2 class="section-title">Todo el ciclo de evaluaci&oacute;n en una sola plataforma</h2>
+        <p class="section-sub">Desde la autoevaluaci&oacute;n del participante hasta el informe ejecutivo para el cliente.</p>
+      </div>
+      <div class="feature-rows">
+        <div class="feature-row">
+          <div>
+            <div class="feature-tag">Evaluaciones</div>
+            <h3>Autoevaluaci&oacute;n y coevaluaci&oacute;n integradas</h3>
+            <p>Los participantes se eval&uacute;an en las competencias del programa. Su jefatura directa los eval&uacute;a con el mismo instrumento. Las dos miradas se cruzan autom&aacute;ticamente.</p>
+            <ul class="feature-bullets">
+              <li>Encuestas PRE y POST configurables por programa</li>
+              <li>Progreso visible pregunta a pregunta</li>
+              <li>Auto-guardado para no perder avance</li>
+              <li>Comparativo autom&aacute;tico entre evaluaciones</li>
+            </ul>
+          </div>
+          <div class="feature-visual">
+            <div class="eval-flow">
+              <div class="eval-step"><div class="eval-step-num">1</div><div class="eval-step-text">Autoevaluaci&oacute;n del participante</div><div class="eval-step-status">completada</div></div>
+              <div class="eval-connector"></div>
+              <div class="eval-step"><div class="eval-step-num">2</div><div class="eval-step-text">Coevaluaci&oacute;n de jefatura</div><div class="eval-step-status">completada</div></div>
+              <div class="eval-connector"></div>
+              <div class="eval-step"><div class="eval-step-num">3</div><div class="eval-step-text">Informe individual generado</div><div class="eval-step-status">en curso</div></div>
+              <div class="eval-connector"></div>
+              <div class="eval-step"><div class="eval-step-num">4</div><div class="eval-step-text">Informe ejecutivo consolidado</div><div class="eval-step-status">pendiente</div></div>
+            </div>
+          </div>
+        </div>
+        <div class="feature-row reverse">
+          <div>
+            <div class="feature-tag">Seguimiento</div>
+            <h3>Dashboard en tiempo real para cada programa</h3>
+            <p>Visualiza el estado del programa completo de un vistazo: tasas de respuesta, niveles de adopci&oacute;n por competencia, y progreso de cada participante.</p>
+            <ul class="feature-bullets">
+              <li>KPIs de adopci&oacute;n y respuesta por programa</li>
+              <li>Heatmap de competencias por participante</li>
+              <li>Comparativo PRE vs POST en tiempo real</li>
+              <li>Seguimiento por jefatura y por equipo</li>
+            </ul>
+          </div>
+          <div class="feature-visual">
+            <div class="dash-mini-header">Nivel de adopci&oacute;n por participante</div>
+            <div class="dash-mini-row"><div class="dash-mini-avatar">LM</div><div class="dash-mini-name">Laura Mart&iacute;nez</div><div class="dash-mini-bar-wrap"><div class="dash-mini-bar" style="width:75%;"></div></div><div class="dash-mini-pct">75%</div></div>
+            <div class="dash-mini-row"><div class="dash-mini-avatar">RD</div><div class="dash-mini-name">Roberto D&iacute;az</div><div class="dash-mini-bar-wrap"><div class="dash-mini-bar gold" style="width:52%;"></div></div><div class="dash-mini-pct">52%</div></div>
+            <div class="dash-mini-row"><div class="dash-mini-avatar">DF</div><div class="dash-mini-name">Diego Fuentes</div><div class="dash-mini-bar-wrap"><div class="dash-mini-bar" style="width:88%;"></div></div><div class="dash-mini-pct">88%</div></div>
+            <div class="dash-mini-row"><div class="dash-mini-avatar">SV</div><div class="dash-mini-name">Sof&iacute;a Vargas</div><div class="dash-mini-bar-wrap"><div class="dash-mini-bar" style="width:64%;"></div></div><div class="dash-mini-pct">64%</div></div>
+          </div>
+        </div>
+        <div class="feature-row">
+          <div>
+            <div class="feature-tag">Inteligencia artificial</div>
+            <h3>Informes ejecutivos generados con IA</h3>
+            <p>La plataforma genera informes individuales y consolidados con an&aacute;lisis, hallazgos y recomendaciones. Lo que antes tomaba d&iacute;as ahora toma minutos.</p>
+            <ul class="feature-bullets">
+              <li>Informe ejecutivo consolidado en PDF</li>
+              <li>Informe individual por participante</li>
+              <li>Hallazgos y recomendaciones autom&aacute;ticas</li>
+              <li>Exportaci&oacute;n a Excel para datos crudos</li>
+            </ul>
+          </div>
+          <div class="feature-visual">
+            <div class="ai-preview">
+              <div class="ai-prompt">"Genera el informe ejecutivo del programa con comparativo PRE/POST y recomendaciones."</div>
+              <div class="ai-output">
+                <div class="ai-output-header"><div class="ai-badge">IA</div><div class="ai-output-title">Informe Ejecutivo &mdash; Programa de Liderazgo</div></div>
+                <div class="ai-output-lines"><div class="ai-line"></div><div class="ai-line"></div><div class="ai-line"></div><div class="ai-line"></div></div>
+                <div class="ai-download">&#x2193; Descargar PDF</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ROLES -->
+  <section class="roles" id="roles">
+    <div class="container">
+      <div class="roles-header">
+        <div class="section-eyebrow">Usuarios</div>
+        <h2 class="section-title">Una experiencia pensada para cada rol</h2>
+        <p class="section-sub">Cada usuario ve exactamente lo que necesita. Sin complejidad innecesaria.</p>
+      </div>
+      <div class="roles-grid">
+        <div class="role-card">
+          <div class="role-icon">&#x1F3AF;</div>
+          <h3>Participante</h3>
+          <p>El l&iacute;der que est&aacute; en el programa. Completa sus evaluaciones, revisa su progreso y accede a sus recursos.</p>
+          <ul class="role-features">
+            <li>Autoevaluaci&oacute;n guiada paso a paso</li>
+            <li>Progreso personal PRE vs POST</li>
+            <li>Actividades y recursos del programa</li>
+            <li>Feedback recibido de su jefatura</li>
+          </ul>
+        </div>
+        <div class="role-card">
+          <div class="role-icon">&#x1F465;</div>
+          <h3>Jefatura</h3>
+          <p>El supervisor directo. Eval&uacute;a a sus reportes, entrega feedback cualitativo y acompa&ntilde;a el proceso.</p>
+          <ul class="role-features">
+            <li>Coevaluaci&oacute;n de cada participante</li>
+            <li>Vista de equipo con estado de avance</li>
+            <li>Feedback estructurado por competencia</li>
+            <li>Informes del equipo con IA</li>
+          </ul>
+        </div>
+        <div class="role-card">
+          <div class="role-icon">&#x2699;&#xFE0F;</div>
+          <h3>Administrador</h3>
+          <p>El equipo consultor. Gestiona programas, configura encuestas y genera los informes finales.</p>
+          <ul class="role-features">
+            <li>Gesti&oacute;n completa de programas</li>
+            <li>Constructor de encuestas</li>
+            <li>Dashboard de seguimiento global</li>
+            <li>Generaci&oacute;n de informes ejecutivos</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- DEMO -->
+  <section class="demo-section" id="demo">
+    <div class="container">
+      <div class="demo-header">
+        <div class="section-eyebrow">Prueba la plataforma</div>
+        <h2 class="section-title">Explora la demo interactiva</h2>
+        <p class="section-sub" style="margin: 0 auto;">Elige un perfil y recorre la plataforma con un tutorial guiado que te muestra cada funcionalidad.</p>
+      </div>
+      <div class="demo-roles">
+        <div class="demo-role-card" onclick="iniciarDemo('admin')">
+          <div class="demo-role-icon admin-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="28" height="28"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M8 16V12M12 16V8M16 16V11"/></svg>
+          </div>
+          <h3>Administrador</h3>
+          <p>Gestiona programas, configura encuestas, visualiza el dashboard global y genera informes ejecutivos con IA.</p>
+          <div class="demo-role-features"><span>Dashboard</span><span>Programas</span><span>Reportes IA</span></div>
+          <div class="demo-role-btn">Probar como Admin</div>
+        </div>
+        <div class="demo-role-card featured" onclick="iniciarDemo('jefatura')">
+          <div class="demo-featured-badge">Recomendado</div>
+          <div class="demo-role-icon jefatura-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="28" height="28"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+          </div>
+          <h3>Jefatura</h3>
+          <p>Eval&uacute;a a tu equipo, entrega feedback cualitativo por competencia y acompa&ntilde;a el desarrollo de cada l&iacute;der.</p>
+          <div class="demo-role-features"><span>Mi Equipo</span><span>Evaluaciones</span><span>Feedback</span></div>
+          <div class="demo-role-btn">Probar como Jefatura</div>
+        </div>
+        <div class="demo-role-card" onclick="iniciarDemo('participante')">
+          <div class="demo-role-icon participante-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="28" height="28"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+          </div>
+          <h3>Participante</h3>
+          <p>Completa tus evaluaciones PRE/POST, revisa tu progreso personal y accede al feedback de tu jefatura.</p>
+          <div class="demo-role-features"><span>Encuestas</span><span>Mi Progreso</span><span>Feedback</span></div>
+          <div class="demo-role-btn">Probar como Participante</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="cta-section" id="contacto">
+    <div class="container">
+      <div class="section-eyebrow">Comienza ahora</div>
+      <h2 class="section-title">Lleva la medici&oacute;n de impacto al siguiente nivel</h2>
+      <p class="section-sub">Agenda una demo personalizada y te mostramos c&oacute;mo la plataforma se adapta a tu programa de desarrollo.</p>
+      <div class="cta-actions">
+        <a href="mailto:contacto@procesos360.cl" class="btn-cta">Agendar demo gratuita</a>
+        <a href="#demo" class="btn-outline">Probar la demo</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer>
+    <div class="container">
+      <div class="footer-inner">
+        <div class="footer-brand">
+          <svg width="24" height="24" viewBox="0 0 36 36" fill="none">
+            <circle cx="10" cy="22" r="8" fill="#7B2D8E" opacity="0.8"/>
+            <circle cx="18" cy="14" r="7" fill="#E87A2E"/>
+            <circle cx="26" cy="22" r="6" fill="#D4A03C" opacity="0.85"/>
+            <circle cx="30" cy="14" r="5" fill="#1B3A5C"/>
+          </svg>
+          <span>Procesos 360</span>
+        </div>
+        <div class="footer-copy">Soluciones Digitales para Desarrollo Organizacional &middot; Plataforma de Transferencia al Puesto de Trabajo</div>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    var nav = document.getElementById('nav');
+    window.addEventListener('scroll', function() {
+      nav.classList.toggle('scrolled', window.scrollY > 40);
+    });
+
+    document.querySelectorAll('a[href^="#"]').forEach(function(a) {
+      a.addEventListener('click', function(e) {
+        var target = document.querySelector(this.getAttribute('href'));
+        if (target) {
+          e.preventDefault();
+          target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      });
+    });
+
+    function iniciarDemo(rol) {
+      var creds = {
+        admin: { email: 'admin@mso.cl', token: 'mock-token-admin', usuario: { id: 'usr-001', nombre: 'Admin Demo', email: 'admin@demo.cl', rol: 'admin', cargo: 'Administrador', cliente_id: null, estado: 'Activo' } },
+        jefatura: { email: 'jrodriguez@losandes.cl', token: 'mock-token-jefatura', usuario: { id: 'usr-002', nombre: 'Javier Rodríguez', email: 'jrodriguez@empresa.cl', rol: 'jefatura', cargo: 'Superintendente', cliente_id: 'cli-001', estado: 'Activo' } },
+        participante: { email: 'lmartinez@losandes.cl', token: 'mock-token-participante', usuario: { id: 'usr-003', nombre: 'Laura Martínez', email: 'lmartinez@empresa.cl', rol: 'participante', cargo: 'Supervisora Planta', cliente_id: 'cli-001', estado: 'Activo' } }
+      };
+
+      var c = creds[rol];
+      if (!c) return;
+
+      sessionStorage.setItem('tpt_token', c.token);
+      sessionStorage.setItem('tpt_usuario', JSON.stringify(c.usuario));
+      sessionStorage.setItem('tpt_demo_tutorial', rol);
+      window.location.href = 'app.html';
+    }
+  </script>
+
+</body>
+</html>
