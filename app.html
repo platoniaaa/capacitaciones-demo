@@ -2017,6 +2017,10 @@ function _ejecutarConfirmacion() {
 
     function iniciar(pasos, alCerrar) {
       if (T.activo) cerrar();
+      // Si quedo abierta la bienvenida del recorrido por rol, se descarta:
+      // de lo contrario los dos recorridos se superponen en pantalla.
+      var w = document.getElementById('tour-welcome');
+      if (w) { w.remove(); sessionStorage.removeItem('tpt_demo_tour'); }
       T.pasos = pasos; T.i = 0; T.activo = true; T.alCerrar = alCerrar || null;
 
       T.ring = document.createElement('div');
