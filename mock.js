@@ -25,7 +25,7 @@ const MOCK_DATA = {
     { id: 'cond-006', nombre: 'Resolución de Conflictos', descripcion: 'Maneja situaciones conflictivas con empatía', programa_id: 'prog-002', prioridad: 2, estado: 'activa' },
   ],
   usuarios: [
-    { id: 'usr-001', nombre: 'Admin Demo', email: 'admin@mso.cl', rol: 'admin', cargo: 'Administrador', cliente_id: null, estado: 'Activo' },
+    { id: 'usr-001', nombre: 'Admin Demo', email: 'admin@demo.cl', rol: 'admin', cargo: 'Administrador', cliente_id: null, estado: 'Activo' },
     { id: 'usr-002', nombre: 'Javier Rodríguez', email: 'jrodriguez@losandes.cl', rol: 'jefatura', cargo: 'Superintendente Mina', cliente_id: 'cli-001', estado: 'Activo' },
     { id: 'usr-003', nombre: 'Laura Martínez', email: 'lmartinez@losandes.cl', rol: 'participante', cargo: 'Supervisora Planta', cliente_id: 'cli-001', estado: 'Activo' },
     { id: 'usr-004', nombre: 'Roberto Díaz', email: 'rdiaz@losandes.cl', rol: 'participante', cargo: 'Jefe de Turno', cliente_id: 'cli-001', estado: 'Activo' },
@@ -248,35 +248,35 @@ const _MOCK_DATA_DEFAULTS = JSON.parse(JSON.stringify(MOCK_DATA));
 // Cargar datos guardados del navegador (si existen)
 (function _cargarDatos() {
   try {
-    var saved = localStorage.getItem('mso_mock_data');
+    var saved = localStorage.getItem('tpt_mock_data');
     if (saved) {
       var parsed = JSON.parse(saved);
       Object.keys(parsed).forEach(function(key) {
         MOCK_DATA[key] = parsed[key];
       });
-      console.log('%c[MSO Demo] Datos cargados desde localStorage', 'color: #4CAF50; font-weight: bold;');
+      console.log('%c[TPT Demo] Datos cargados desde localStorage', 'color: #4CAF50; font-weight: bold;');
     }
   } catch(e) {
-    console.warn('[MSO Demo] Error cargando datos guardados:', e);
+    console.warn('[TPT Demo] Error cargando datos guardados:', e);
   }
 })();
 
 function _guardarDatos() {
   try {
-    localStorage.setItem('mso_mock_data', JSON.stringify(MOCK_DATA));
+    localStorage.setItem('tpt_mock_data', JSON.stringify(MOCK_DATA));
   } catch(e) {
-    console.warn('[MSO Demo] Error guardando datos:', e);
+    console.warn('[TPT Demo] Error guardando datos:', e);
   }
 }
 
 function resetearDatosDemo() {
-  localStorage.removeItem('mso_mock_data');
+  localStorage.removeItem('tpt_mock_data');
   Object.keys(_MOCK_DATA_DEFAULTS).forEach(function(key) {
     MOCK_DATA[key] = JSON.parse(JSON.stringify(_MOCK_DATA_DEFAULTS[key]));
   });
   // Reset _participantes_programa to defaults
   MOCK_DATA._participantes_programa = JSON.parse(JSON.stringify(_PARTICIPANTES_DEFAULTS));
-  console.log('%c[MSO Demo] Datos reseteados a valores originales', 'color: #FF5722; font-weight: bold;');
+  console.log('%c[TPT Demo] Datos reseteados a valores originales', 'color: #FF5722; font-weight: bold;');
   location.reload();
 }
 
@@ -302,7 +302,7 @@ MOCK_DATA._participantes_programa = {
 const _PARTICIPANTES_DEFAULTS = JSON.parse(JSON.stringify(MOCK_DATA._participantes_programa));
 (function _cargarParticipantes() {
   try {
-    var saved = localStorage.getItem('mso_mock_participantes');
+    var saved = localStorage.getItem('tpt_mock_participantes');
     if (saved) {
       MOCK_DATA._participantes_programa = JSON.parse(saved);
     }
@@ -314,14 +314,14 @@ var _guardarDatosOriginal = _guardarDatos;
 _guardarDatos = function() {
   _guardarDatosOriginal();
   try {
-    localStorage.setItem('mso_mock_participantes', JSON.stringify(MOCK_DATA._participantes_programa));
+    localStorage.setItem('tpt_mock_participantes', JSON.stringify(MOCK_DATA._participantes_programa));
   } catch(e) {}
 };
 
 const backendFunctions = {
   // Auth
   loginUsuario: (email, password) => {
-    if (email === 'admin@mso.cl' && password === '123456') {
+    if (email === 'admin@demo.cl' && password === '123456') {
       return { success: true, data: { token: 'mock-token-admin', usuario: MOCK_DATA.usuarios[0] } };
     }
     if (email === 'jrodriguez@losandes.cl' && password === '123456') {
@@ -1508,4 +1508,4 @@ function _mkRunner() {
   });
 }
 
-console.log('%c[MSO Demo] Maqueta estática activa - mock.js cargado', 'color: #F58220; font-weight: bold;');
+console.log('%c[TPT Demo] Maqueta estática activa - mock.js cargado', 'color: #F58220; font-weight: bold;');

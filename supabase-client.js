@@ -14,9 +14,9 @@ function initSupabase() {
   if (typeof window.supabase !== 'undefined' && window.supabase.createClient) {
     _supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
     _supabaseReady = true;
-    console.log('%c[MSO] Supabase conectado', 'color: #10B981; font-weight: bold;');
+    console.log('%c[TPT] Supabase conectado', 'color: #10B981; font-weight: bold;');
   } else {
-    console.error('[MSO] SDK de Supabase no cargado');
+    console.error('[TPT] SDK de Supabase no cargado');
   }
 }
 
@@ -981,4 +981,4 @@ function _mkRunner() {
   });
 }
 
-console.log('%c[MSO] Supabase client cargado - conectando a ' + SUPABASE_URL, 'color: #F58220; font-weight: bold;');
+console.log('%c[TPT] Supabase client cargado - conectando a ' + SUPABASE_URL, 'color: #F58220; font-weight: bold;');
