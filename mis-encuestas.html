@@ -29,7 +29,7 @@
           </div>
           <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:6px;font-size:12px;">
             <div><strong style="color:var(--color-secundario, #F58220);">Nivel 1:</strong> <span style="color:var(--color-texto-sec);">Conoce el concepto pero no lo aplica</span></div>
-            <div><strong style="color:var(--color-secundario, #F58220);">Nivel 2:</strong> <span style="color:var(--color-texto-sec);">Aplica con orientacion o apoyo</span></div>
+            <div><strong style="color:var(--color-secundario, #F58220);">Nivel 2:</strong> <span style="color:var(--color-texto-sec);">Aplica con orientación o apoyo</span></div>
             <div><strong style="color:var(--color-secundario, #F58220);">Nivel 3:</strong> <span style="color:var(--color-texto-sec);">Aplica de forma consistente y autonoma</span></div>
             <div><strong style="color:var(--color-secundario, #F58220);">Nivel 4:</strong> <span style="color:var(--color-texto-sec);">Es referente y modelo para otros</span></div>
           </div>
@@ -62,6 +62,7 @@
 
 <script>
   var encuestasPendientes = [];
+  var encuestasCompletadasData = [];
   var encuestaActualId = null;
   var preguntasActuales = [];
 
@@ -73,9 +74,11 @@
     google.script.run
       .withSuccessHandler(function(r) {
         if (r.success) {
-          encuestasPendientes = r.data || [];
+          var todas = r.data || [];
+          encuestasPendientes = todas.filter(function(e) { return e.estado !== 'completada'; });
+          encuestasCompletadasData = todas.filter(function(e) { return e.estado === 'completada'; });
           renderPendientes(encuestasPendientes);
-          renderCompletadas();
+          renderCompletadas(encuestasCompletadasData);
         } else {
           document.getElementById('encuestas-pendientes').innerHTML =
             '<div class="empty-state"><p>' + escapeHtml(r.error) + '</p></div>';
@@ -88,57 +91,48 @@
       .obtenerEncuestaPendiente(App.token);
   }
 
+  function cardEncuesta(e, completada) {
+    var tipoBadge = e.tipo === 'pre'
+      ? '<span class="badge badge-info">PRE</span>'
+      : '<span class="badge badge-success">POST</span>';
+    var fechaLimite = e.fecha_cierre ? '<span class="text-xs text-muted">Fecha límite: ' + formatDate(e.fecha_cierre) + '</span>' : '';
+    var liderInfo = e.lider_nombre
+      ? '<br><span class="text-sm" style="color:var(--color-primario);font-weight:500;">Evaluando a: ' + escapeHtml(e.lider_nombre) + '</span>'
+      : '';
+    var accion = completada
+      ? '<div style="display:flex;align-items:center;gap:8px;">' +
+          '<span class="badge badge-success" style="padding:8px 16px;">Completada</span>' +
+          '<button class="btn btn-outline btn-sm" style="white-space:nowrap;" onclick="rehacerEncuesta(\'' + e.id + '\')">Rehacer evaluaci&oacute;n</button>' +
+        '</div>'
+      : '<button class="btn btn-primary" onclick="abrirEncuesta(\'' + e.id + '\')">Responder</button>';
+
+    return '<div class="card mb-3"><div class="card-body flex-between">' +
+      '<div>' +
+        '<strong>' + escapeHtml(e.nombre) + '</strong> ' + tipoBadge + '<br>' +
+        '<span class="text-sm text-muted">Programa: ' + escapeHtml(e.programa_nombre) + '</span>' +
+        liderInfo + '<br>' +
+        fechaLimite +
+      '</div>' +
+      accion +
+    '</div></div>';
+  }
+
   function renderPendientes(encuestas) {
     var div = document.getElementById('encuestas-pendientes');
     if (!encuestas || encuestas.length === 0) {
       div.innerHTML = '<div class="empty-state"><p>No tienes encuestas pendientes. Buen trabajo.</p></div>';
       return;
     }
-
-    div.innerHTML = encuestas.map(function(e) {
-      var tipoBadge = e.tipo === 'pre'
-        ? '<span class="badge badge-info">PRE</span>'
-        : '<span class="badge badge-success">POST</span>';
-      var fechaLimite = e.fecha_cierre ? '<span class="text-xs text-muted">Fecha limite: ' + formatDate(e.fecha_cierre) + '</span>' : '';
-
-      var liderInfo = e.lider_nombre
-        ? '<br><span class="text-sm" style="color:var(--color-primario);font-weight:500;">Evaluando a: ' + escapeHtml(e.lider_nombre) + '</span>'
-        : '';
-
-      return '<div class="card mb-3"><div class="card-body flex-between">' +
-        '<div>' +
-          '<strong>' + escapeHtml(e.nombre) + '</strong> ' + tipoBadge + '<br>' +
-          '<span class="text-sm text-muted">Programa: ' + escapeHtml(e.programa_nombre) + '</span>' +
-          liderInfo + '<br>' +
-          fechaLimite +
-        '</div>' +
-        '<button class="btn btn-primary" onclick="abrirEncuesta(\'' + e.id + '\')">Responder</button>' +
-      '</div></div>';
-    }).join('');
+    div.innerHTML = encuestas.map(function(e) { return cardEncuesta(e, false); }).join('');
   }
 
-  function renderCompletadas() {
-    // Las encuestas completadas se obtienen comparando: las que estan en el programa pero no en pendientes
-    // Simplemente mostramos un mensaje si ya no hay pendientes
+  function renderCompletadas(encuestas) {
     var div = document.getElementById('encuestas-completadas');
-    div.innerHTML = '<div class="empty-state"><p>Las encuestas que hayas completado apareceran aqui una vez cargadas.</p></div>';
-
-    // Intentamos cargar el progreso para mostrar encuestas ya respondidas
-    google.script.run
-      .withSuccessHandler(function(r) {
-        if (r.success && r.data && r.data.comparacion && r.data.comparacion.length > 0) {
-          div.innerHTML = '<div class="card"><div class="card-body">' +
-            '<p class="text-sm text-muted">Has respondido encuestas en tus programas asignados. ' +
-            'Revisa tu progreso en la seccion "Mi Progreso".</p>' +
-          '</div></div>';
-        } else {
-          div.innerHTML = '<div class="empty-state"><p>Aun no has completado ninguna encuesta.</p></div>';
-        }
-      })
-      .withFailureHandler(function() {
-        div.innerHTML = '';
-      })
-      .obtenerMiProgreso(App.token);
+    if (!encuestas || encuestas.length === 0) {
+      div.innerHTML = '<div class="empty-state"><p>Aún no has completado ninguna encuesta.</p></div>';
+      return;
+    }
+    div.innerHTML = encuestas.map(function(e) { return cardEncuesta(e, true); }).join('');
   }
 
   function abrirEncuesta(encuestaId) {
@@ -149,12 +143,13 @@
     document.getElementById('encuestas-completadas').parentElement.classList.add('hidden');
     document.getElementById('encuesta-form-container').classList.remove('hidden');
 
-    var enc = encuestasPendientes.find(function(e) { return e.id === encuestaId; });
+    var enc = encuestasPendientes.find(function(e) { return e.id === encuestaId; }) ||
+              encuestasCompletadasData.find(function(e) { return e.id === encuestaId; });
     if (enc) {
       document.getElementById('enc-form-titulo').textContent = enc.nombre;
       var subtexto = 'Programa: ' + enc.programa_nombre;
       if (enc.lider_nombre) {
-        subtexto += '  |  Estas evaluando a: ' + enc.lider_nombre;
+        subtexto += '  |  Estás evaluando a: ' + enc.lider_nombre;
       }
       document.getElementById('enc-form-programa').textContent = subtexto;
     }
@@ -383,4 +378,33 @@
     encuestaActualId = null;
     preguntasActuales = [];
   }
+
+  function rehacerEncuesta(encuestaId) {
+    if (!confirm('¿Est\u00e1s seguro de rehacer esta evaluaci\u00f3n? Tus respuestas anteriores ser\u00e1n eliminadas.')) return;
+
+    showToast('Eliminando respuestas anteriores...', 'info');
+
+    google.script.run
+      .withSuccessHandler(function(r) {
+        if (r && r.success) {
+          showToast('Puedes volver a responder la evaluaci\u00f3n.', 'success');
+          var enc = encuestasCompletadasData.find(function(e) { return e.id === encuestaId; });
+          if (enc) {
+            enc.estado = 'activa';
+            encuestasPendientes.push(enc);
+            encuestasCompletadasData = encuestasCompletadasData.filter(function(e) { return e.id !== encuestaId; });
+          }
+          renderPendientes(encuestasPendientes);
+          renderCompletadas(encuestasCompletadasData);
+          abrirEncuesta(encuestaId);
+        } else {
+          showToast(r ? r.error : 'Error al rehacer encuesta.', 'error');
+        }
+      })
+      .withFailureHandler(function(err) {
+        showToast('Error de conexi\u00f3n: ' + (err.message || err), 'error');
+      })
+      .rehacerEncuesta(App.token, encuestaId);
+  }
+  window.rehacerEncuesta = rehacerEncuesta;
 </script>

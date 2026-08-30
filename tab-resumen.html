@@ -130,6 +130,12 @@
           <button id="btn-activar-resumen" class="btn btn-success btn-sm hidden" onclick="activarProgramaPanel()">
             Activar programa
           </button>
+          <button id="btn-desactivar-resumen" class="btn btn-warning btn-sm hidden" onclick="desactivarProgramaPanel()">
+            Suspender programa
+          </button>
+          <button id="btn-reactivar-resumen" class="btn btn-success btn-sm hidden" onclick="activarProgramaPanel()">
+            Reactivar programa
+          </button>
         </div>
       </div>
     </div>
@@ -171,10 +177,10 @@
         <thead>
           <tr>
             <th>L&iacute;der</th>
-            <th style="text-align:center;">Auto PRE</th>
-            <th style="text-align:center;">Co PRE</th>
-            <th style="text-align:center;">Auto POST</th>
-            <th style="text-align:center;">Co POST</th>
+            <th style="text-align:center;">Auto Inicial</th>
+            <th style="text-align:center;">Co Inicial</th>
+            <th style="text-align:center;">Auto Final</th>
+            <th style="text-align:center;">Co Final</th>
             <th>Colaborador Asignado</th>
           </tr>
         </thead>
@@ -300,7 +306,15 @@
       badgeEl.className = 'badge ' + (estadoMap[estado] || 'badge-secondary');
       badgeEl.textContent = estado.charAt(0).toUpperCase() + estado.slice(1);
 
-      if (estado === 'diseno') document.getElementById('btn-activar-resumen').classList.remove('hidden');
+      var btnActR = document.getElementById('btn-activar-resumen');
+      var btnDesR = document.getElementById('btn-desactivar-resumen');
+      var btnReactR = document.getElementById('btn-reactivar-resumen');
+      if (btnActR) btnActR.classList.add('hidden');
+      if (btnDesR) btnDesR.classList.add('hidden');
+      if (btnReactR) btnReactR.classList.add('hidden');
+      if (estado === 'diseno' && btnActR) btnActR.classList.remove('hidden');
+      else if (estado === 'activo' && btnDesR) btnDesR.classList.remove('hidden');
+      else if (estado === 'suspendido' && btnReactR) btnReactR.classList.remove('hidden');
     }
     cargarResumenPrograma();
   })();

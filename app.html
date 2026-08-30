@@ -4,6 +4,9 @@
   
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -909,8 +912,8 @@
   .tooltip-help:hover .tooltip-text { visibility: visible; opacity: 1; }
 </style>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="supabase-client.js"></script>
+
+<script src="mock.js"></script>
 </head>
 <body>
   <!-- Loading Overlay -->
@@ -923,8 +926,7 @@
     <!-- Sidebar -->
     <aside class="sidebar" id="sidebar">
       <div class="sidebar-header">
-        <svg viewBox="0 0 36 36" fill="none" style="width:48px;height:48px;margin:0 auto 8px;display:block;"><circle cx="10" cy="22" r="8" fill="#7B2D8E" opacity="0.8"/><circle cx="18" cy="14" r="7" fill="#F58220"/><circle cx="26" cy="22" r="6" fill="#D4A03C" opacity="0.85"/><circle cx="30" cy="14" r="5" fill="#1B3A5C"/></svg>
-        <div style="font-size:16px;font-weight:700;letter-spacing:1px;text-align:center;">Procesos <span style="color:#F58220;">360</span></div>
+        <svg viewBox="0 0 36 36" fill="none" style="width:44px;height:44px;margin:0 auto 6px;display:block;"><circle cx="10" cy="22" r="8" fill="#7B2D8E" opacity="0.8"/><circle cx="18" cy="14" r="7" fill="#F58220"/><circle cx="26" cy="22" r="6" fill="#D4A03C" opacity="0.85"/><circle cx="30" cy="14" r="5" fill="#1B3A5C"/></svg><div style="font-size:15px;font-weight:700;letter-spacing:0.5px;">Procesos <span style="color:#F58220;">360</span></div>
         <div class="text-xs" style="opacity:0.6;">Transferencia al Puesto</div>
       </div>
 
@@ -967,6 +969,9 @@
           </div>
         </div>
       </header>
+
+      <!-- Banner de estado de licencia -->
+      <div id="licencia-banner" class="hidden" style="padding:14px 24px;font-size:14px;line-height:1.4;border-left:4px solid;"></div>
 
       <div class="content-area" id="content-area">
         <!-- Contenido dinámico se carga aquí -->
@@ -1057,6 +1062,25 @@ var App = {
    */
   isParticipante: function() {
     return this.getRol() === 'participante';
+  },
+
+  /**
+   * Estado de licencia del cliente actual.
+   * Se carga en init() y se usa para bloquear acciones de escritura.
+   */
+  licencia: { estado: 'activa', dias_restantes: null, fecha_expiracion: null, nivel_aviso: null, es_admin_global: false },
+
+  /**
+   * Config global de plataforma (kill switch del proveedor).
+   */
+  configPlataforma: { activa: true, modo_solo_lectura: false, mensaje: null },
+
+  /**
+   * Indica si la plataforma esta en modo solo lectura (por licencia del cliente o por config global del proveedor).
+   */
+  isSoloLectura: function() {
+    if (this.configPlataforma && this.configPlataforma.modo_solo_lectura) return true;
+    return this.licencia && this.licencia.estado === 'solo_lectura' && !this.licencia.es_admin_global;
   },
 
   /**
@@ -1352,7 +1376,7 @@ function getBadge(estado) {
     'suspendido': 'badge-danger'
   };
   var clase = clases[estado] || 'badge-secondary';
-  var labels = { 'jefatura': 'Lider', 'participante': 'Participante', 'colaborador': 'Colaborador', 'admin': 'Admin', 'lider': 'Lider' };
+  var labels = { 'jefatura': 'L\u00edder', 'participante': 'Colaborador', 'colaborador': 'Colaborador', 'admin': 'Admin', 'lider': 'L\u00edder' };
   var label = labels[estado] || estado;
   return '<span class="badge ' + clase + '">' + escapeHtml(label) + '</span>';
 }
@@ -1372,7 +1396,7 @@ function debounce(func, wait) {
 }
 
 /**
- * Confirmar accion (backward-compatible: synchronous fallback)
+ * Confirmar acción (backward-compatible: synchronous fallback)
  * If called with only a string argument, uses native confirm() for backward compat.
  * Use confirmarAccion() for the async modal version.
  */
@@ -1383,14 +1407,14 @@ function confirmar(mensaje) {
 /**
  * Muestra un modal de confirmacion personalizado (async, callback-based)
  * @param {string} mensaje - Titulo del modal
- * @param {string} descripcion - Descripcion de la accion / consecuencias
+ * @param {string} descripcion - Descripción de la accion / consecuencias
  * @param {function} onConfirm - Callback ejecutado al confirmar
  */
 function confirmarAccion(mensaje, descripcion, onConfirm) {
   var overlay = document.getElementById('modal-confirmar');
   if (!overlay) return;
 
-  document.getElementById('confirmar-titulo').textContent = mensaje || 'Confirmar accion';
+  document.getElementById('confirmar-titulo').textContent = mensaje || 'Confirmar acción';
   document.getElementById('confirmar-descripcion').textContent = descripcion || '';
   document.getElementById('confirmar-descripcion').style.display = descripcion ? 'block' : 'none';
 
@@ -1437,27 +1461,28 @@ function _ejecutarConfirmacion() {
         { id: 'clientes', label: 'Clientes', icon: 'building' },
         { id: 'programas', label: 'Programas', icon: 'clipboard' },
         { id: 'usuarios', label: 'Usuarios', icon: 'users' },
-        { id: 'hallazgos', label: 'Hallazgos', icon: 'lightbulb' },
         { id: 'gestion-observaciones', label: 'Incidencias', icon: 'alert' },
         { id: 'correos', label: 'Correos', icon: 'email' }
       ],
       jefatura: [
-        { id: 'home-lider', label: 'Inicio', icon: 'home' },
+        { id: 'mi-programa', label: 'Mi Programa', icon: 'clipboard' },
         { id: 'mis-encuestas', label: 'Mis Evaluaciones', icon: 'survey' },
         { id: 'mi-equipo', label: 'Mi Equipo', icon: 'users' },
-        { id: 'mis-recursos', label: 'Archivos y Recursos', icon: 'file' }
+        { id: 'mi-informe', label: 'Mi Informe', icon: 'chart' },
+        { id: 'mis-recursos', label: 'Archivos y Recursos', icon: 'file' },
+        { id: 'reportar', label: 'Incidencias', icon: 'alert' }
       ],
       participante: [
-        { id: 'mis-actividades', label: 'Mis Actividades', icon: 'calendar' },
+        { id: 'mi-programa', label: 'Mi Programa', icon: 'clipboard' },
         { id: 'mis-encuestas', label: 'Mis Encuestas', icon: 'survey' },
         { id: 'mis-recursos', label: 'Archivos y Recursos', icon: 'file' },
-        { id: 'mi-progreso', label: 'Mi Progreso', icon: 'chart' },
-        { id: 'feedback-recibido', label: 'Feedback Recibido', icon: 'message' },
         { id: 'reportar', label: 'Incidencias', icon: 'alert' }
       ],
       colaborador: [
+        { id: 'mi-programa', label: 'Mi Programa', icon: 'clipboard' },
         { id: 'mis-encuestas', label: 'Mis Encuestas', icon: 'survey' },
-        { id: 'mis-recursos', label: 'Archivos y Recursos', icon: 'file' }
+        { id: 'mis-recursos', label: 'Archivos y Recursos', icon: 'file' },
+        { id: 'reportar', label: 'Incidencias', icon: 'alert' }
       ]
     };
 
@@ -1493,9 +1518,45 @@ function _ejecutarConfirmacion() {
         return;
       }
 
+      // Kill switch del proveedor: verificar config global antes de todo
+      google.script.run
+        .withSuccessHandler(function(r) {
+          var cfg = (r && r.success) ? (r.data || {}) : { activa: true, modo_solo_lectura: false };
+          if (cfg.activa === false) {
+            mostrarPantallaMantenimiento(cfg.mensaje);
+            return;
+          }
+          App.configPlataforma = cfg;
+          inicializarApp();
+        })
+        .withFailureHandler(function() {
+          App.configPlataforma = { activa: true, modo_solo_lectura: false };
+          inicializarApp();
+        })
+        .obtenerConfigPlataforma();
+    });
+
+    function mostrarPantallaMantenimiento(mensajeCustom) {
+      document.body.innerHTML =
+        '<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:#f5f5f7;padding:24px;">' +
+          '<div style="max-width:480px;text-align:center;background:white;border-radius:12px;padding:48px 32px;box-shadow:0 4px 20px rgba(0,0,0,0.08);">' +
+            '<svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#6b5b95" stroke-width="1.5" style="margin-bottom:20px;">' +
+              '<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>' +
+            '</svg>' +
+            '<h1 style="font-size:22px;color:#2d1b4e;margin-bottom:12px;">Servicio temporalmente no disponible</h1>' +
+            '<p style="color:#666;line-height:1.5;font-size:14px;margin-bottom:20px;">' +
+              (mensajeCustom ? String(mensajeCustom).replace(/</g, '&lt;') :
+                'La plataforma se encuentra en mantenimiento. Por favor contacta al administrador del servicio para mas informacion.') +
+            '</p>' +
+            '<button onclick="sessionStorage.clear();window.location.href=\'index.html\'" style="background:#6b5b95;color:white;border:none;padding:10px 24px;border-radius:6px;cursor:pointer;font-size:14px;">Cerrar sesi\u00f3n</button>' +
+          '</div>' +
+        '</div>';
+    }
+
+    function inicializarApp() {
       // Mostrar datos del usuario
       document.getElementById('user-name').textContent = App.usuario.nombre;
-      var rolLabel = { admin: 'ADMIN', jefatura: 'LIDER', participante: 'PARTICIPANTE', colaborador: 'COLABORADOR' };
+      var rolLabel = { admin: 'ADMIN', jefatura: 'L\u00cdDER', participante: 'COLABORADOR', colaborador: 'COLABORADOR' };
       document.getElementById('user-role').textContent = rolLabel[App.usuario.rol] || App.usuario.rol.toUpperCase();
 
       // Construir menú
@@ -1503,13 +1564,121 @@ function _ejecutarConfirmacion() {
 
       // Cargar vista inicial
       var rol = App.getRol();
-      var defaultView = rol === 'jefatura' ? 'home-lider' :
-                         (rol === 'participante' || rol === 'colaborador') ? 'mis-encuestas' : 'dashboard';
+      var defaultView = (rol === 'jefatura' || rol === 'participante' || rol === 'colaborador') ? 'mi-programa' : 'dashboard';
       cargarVista(defaultView);
 
       // Cargar notificaciones
       cargarContadorNotificaciones();
-    });
+
+      // Cargar estado de licencia y pintar banner
+      cargarEstadoLicencia();
+    }
+
+    // ============================================
+    // CONTROL DE LICENCIA
+    // ============================================
+    function cargarEstadoLicencia() {
+      google.script.run
+        .withSuccessHandler(function(r) {
+          if (r && r.success) {
+            App.licencia = r.data || App.licencia;
+            pintarBannerLicencia();
+            aplicarSoloLectura();
+          }
+        })
+        .withFailureHandler(function() {})
+        .obtenerEstadoLicencia(App.token, null);
+    }
+
+    function pintarBannerLicencia() {
+      var banner = document.getElementById('licencia-banner');
+      if (!banner) return;
+      var l = App.licencia || {};
+      var cfg = App.configPlataforma || {};
+
+      // Prioridad 1: modo solo lectura activado a nivel global (proveedor)
+      if (cfg.modo_solo_lectura) {
+        banner.style.background = '#f8d7da';
+        banner.style.borderLeftColor = '#c0392b';
+        banner.style.color = '#721c24';
+        banner.innerHTML = cfg.mensaje
+          ? String(cfg.mensaje).replace(/</g, '&lt;')
+          : '<strong>Servicio en modo solo lectura.</strong> Puedes consultar la informacion pero no realizar cambios. Contacta al administrador del servicio.';
+        banner.classList.remove('hidden');
+        return;
+      }
+
+      if (l.es_admin_global) { banner.classList.add('hidden'); return; }
+
+      var d = l.dias_restantes;
+      var estado = l.estado || 'activa';
+      var mensaje = '';
+      var bg = '', border = '', color = '';
+
+      if (estado === 'solo_lectura') {
+        bg = '#f8d7da'; border = '#c0392b'; color = '#721c24';
+        mensaje = '<strong>Servicio en modo solo lectura.</strong> La licencia vencio' +
+          (l.fecha_expiracion ? ' el ' + l.fecha_expiracion : '') +
+          '. Puedes consultar la informacion pero no realizar cambios. Contacta a Procesos 360 para regularizar.';
+      } else if (l.nivel_aviso === 'urgente') {
+        bg = '#f8d7da'; border = '#e74c3c'; color = '#721c24';
+        mensaje = '<strong>Atencion:</strong> La licencia vence en ' + d + ' dia' + (d !== 1 ? 's' : '') +
+          (l.fecha_expiracion ? ' (' + l.fecha_expiracion + ')' : '') +
+          '. Regulariza el pago para evitar la suspension del servicio.';
+      } else if (l.nivel_aviso === 'proximo') {
+        bg = '#fff3cd'; border = '#f39c12'; color = '#856404';
+        mensaje = 'La licencia vence en ' + d + ' dias' +
+          (l.fecha_expiracion ? ' (' + l.fecha_expiracion + ')' : '') +
+          '. Contacta a Procesos 360 para renovar.';
+      } else {
+        banner.classList.add('hidden');
+        return;
+      }
+      banner.style.background = bg;
+      banner.style.borderLeftColor = border;
+      banner.style.color = color;
+      banner.innerHTML = mensaje;
+      banner.classList.remove('hidden');
+    }
+
+    function aplicarSoloLectura() {
+      if (!App.isSoloLectura()) {
+        document.body.classList.remove('licencia-solo-lectura');
+        return;
+      }
+      document.body.classList.add('licencia-solo-lectura');
+      // Observer que bloquea los botones que aparezcan en vistas cargadas dinamicamente
+      if (window._licenciaObserver) return;
+      window._licenciaObserver = new MutationObserver(function() { bloquearAccionesSoloLectura(); });
+      window._licenciaObserver.observe(document.getElementById('content-area'), { childList: true, subtree: true });
+      bloquearAccionesSoloLectura();
+    }
+
+    function bloquearAccionesSoloLectura() {
+      if (!App.isSoloLectura()) return;
+      var area = document.getElementById('content-area');
+      if (!area) return;
+      var btns = area.querySelectorAll('button, input[type="submit"], input[type="button"]');
+      btns.forEach(function(btn) {
+        if (btn.dataset.licenciaBloqueado === '1') return;
+        var txt = (btn.textContent || btn.value || '').toLowerCase();
+        var cls = (btn.className || '').toLowerCase();
+        // Permitir botones de navegacion, cerrar modales y descargar/ver
+        var permitidos = /volver|cerrar|cancelar|descargar|ver|exportar|imprimir|filtrar|buscar/;
+        var accionesEscritura = /guardar|enviar|responder|activar|crear|eliminar|agregar|cargar|importar|asignar|subir|nuevo|actualizar|generar|rehacer|reabrir|notificar|rese?tear|pass|cambiar|borrar|quitar|reemplazar|editar|modificar|registrar/;
+        if (permitidos.test(txt)) return;
+        if (accionesEscritura.test(txt) || accionesEscritura.test(cls)) {
+          btn.disabled = true;
+          btn.style.opacity = '0.5';
+          btn.style.cursor = 'not-allowed';
+          btn.title = 'Accion deshabilitada: licencia vencida';
+          btn.dataset.licenciaBloqueado = '1';
+        }
+      });
+      // Deshabilitar inputs de archivo y forms editables en encuestas
+      var inputs = area.querySelectorAll('input[type="file"]');
+      inputs.forEach(function(i) { i.disabled = true; i.title = 'Licencia vencida'; });
+    }
 
     // ============================================
     // MENÚ DE NAVEGACIÓN
@@ -1545,6 +1714,7 @@ function _ejecutarConfirmacion() {
       // Mapeo de vista a archivo HTML y título
       var vistas = {
         'home-lider': { html: 'home-lider', titulo: 'Inicio' },
+        'mi-programa': { html: 'mi-programa', titulo: 'Mi Programa' },
         'dashboard': { html: 'dashboard', titulo: 'Dashboard' },
         'clientes': { html: 'clientes', titulo: 'Gesti\u00f3n de Clientes' },
         'programas': { html: 'programas', titulo: 'Gesti\u00f3n de Programas' },
@@ -1557,6 +1727,7 @@ function _ejecutarConfirmacion() {
         'observaciones': { html: 'checklists', titulo: 'Mis Observaciones' },
         'feedback': { html: 'feedback-jefatura', titulo: 'Feedback' },
         'mi-equipo': { html: 'mi-equipo', titulo: 'Mi Equipo' },
+        'mi-informe': { html: 'mi-informe', titulo: 'Mi Informe' },
         'mi-progreso': { html: 'mi-progreso', titulo: 'Mi Progreso' },
         'feedback-recibido': { html: 'feedback-recibido', titulo: 'Feedback Recibido' },
         'notificaciones': { html: 'notificaciones', titulo: 'Notificaciones' },
@@ -1718,475 +1889,11 @@ function _ejecutarConfirmacion() {
     }
   </script>
 
-  <!-- ============================================
-       TUTORIAL INTERACTIVO DEMO
-       ============================================ -->
-  <style>
-    .tutorial-overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.6);
-      z-index: 9998;
-      transition: opacity 0.3s;
-    }
-    .tutorial-overlay.fade-out { opacity: 0; }
-
-    .tutorial-highlight {
-      position: absolute;
-      z-index: 9999;
-      box-shadow: 0 0 0 4000px rgba(0,0,0,0.55);
-      border-radius: 8px;
-      transition: all 0.4s ease;
-      pointer-events: none;
-    }
-
-    .tutorial-tooltip {
-      position: absolute;
-      z-index: 10000;
-      background: #fff;
-      color: #2D3748;
-      border-radius: 12px;
-      padding: 24px;
-      max-width: 360px;
-      box-shadow: 0 16px 48px rgba(0,0,0,0.25);
-      font-family: 'Inter', Arial, sans-serif;
-      transition: opacity 0.3s, transform 0.3s;
-    }
-
-    .tutorial-tooltip-arrow {
-      position: absolute;
-      width: 12px;
-      height: 12px;
-      background: #fff;
-      transform: rotate(45deg);
-    }
-
-    .tutorial-tooltip-arrow.left { left: -6px; top: 24px; }
-    .tutorial-tooltip-arrow.top { top: -6px; left: 24px; }
-    .tutorial-tooltip-arrow.bottom { bottom: -6px; left: 24px; }
-    .tutorial-tooltip-arrow.right { right: -6px; top: 24px; }
-
-    .tutorial-step-count {
-      font-size: 11px;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-      color: #F58220;
-      margin-bottom: 8px;
-    }
-
-    .tutorial-tooltip h4 {
-      font-size: 16px;
-      font-weight: 600;
-      color: #3D0C4B;
-      margin-bottom: 8px;
-    }
-
-    .tutorial-tooltip p {
-      font-size: 13px;
-      color: #718096;
-      line-height: 1.6;
-      margin-bottom: 16px;
-    }
-
-    .tutorial-actions {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 12px;
-    }
-
-    .tutorial-btn {
-      padding: 8px 20px;
-      border-radius: 6px;
-      font-size: 13px;
-      font-weight: 600;
-      cursor: pointer;
-      border: none;
-      font-family: 'Inter', Arial, sans-serif;
-      transition: background 0.2s;
-    }
-
-    .tutorial-btn-next {
-      background: #F58220;
-      color: #fff;
-    }
-    .tutorial-btn-next:hover { background: #e0740f; }
-
-    .tutorial-btn-skip {
-      background: transparent;
-      color: #718096;
-      padding: 8px 12px;
-    }
-    .tutorial-btn-skip:hover { color: #2D3748; }
-
-    .tutorial-btn-finish {
-      background: #27AE60;
-      color: #fff;
-    }
-    .tutorial-btn-finish:hover { background: #219a52; }
-
-    .tutorial-progress {
-      display: flex;
-      gap: 4px;
-      flex: 1;
-      justify-content: center;
-    }
-
-    .tutorial-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: #E2E8F0;
-      transition: background 0.2s;
-    }
-    .tutorial-dot.active { background: #F58220; }
-    .tutorial-dot.done { background: #27AE60; }
-
-    .tutorial-welcome {
-      position: fixed;
-      inset: 0;
-      z-index: 10001;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: rgba(0,0,0,0.7);
-    }
-
-    .tutorial-welcome-card {
-      background: #fff;
-      border-radius: 16px;
-      padding: 40px;
-      max-width: 480px;
-      width: 90%;
-      text-align: center;
-      box-shadow: 0 24px 80px rgba(0,0,0,0.3);
-      font-family: 'Inter', Arial, sans-serif;
-    }
-
-    .tutorial-welcome-card h2 {
-      font-size: 22px;
-      font-weight: 700;
-      color: #3D0C4B;
-      margin-bottom: 8px;
-    }
-
-    .tutorial-welcome-card .role-badge {
-      display: inline-block;
-      background: rgba(245,130,32,0.1);
-      color: #F58220;
-      font-size: 12px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-      padding: 4px 14px;
-      border-radius: 20px;
-      margin-bottom: 16px;
-    }
-
-    .tutorial-welcome-card p {
-      font-size: 14px;
-      color: #718096;
-      line-height: 1.7;
-      margin-bottom: 24px;
-    }
-
-    .tutorial-welcome-actions {
-      display: flex;
-      gap: 12px;
-      justify-content: center;
-    }
-  </style>
-
-  <script>
-    (function() {
-      var TUTORIAL_STEPS = {
-        admin: [
-          {
-            target: '#sidebar',
-            title: 'Barra de navegación',
-            text: 'Desde aquí accedes a todas las secciones. El menú se adapta automáticamente a tu rol.',
-            arrow: 'left',
-            offsetX: 270, offsetY: 0
-          },
-          {
-            target: '[data-vista="dashboard"]',
-            title: 'Dashboard',
-            text: 'Panel principal con KPIs del programa: participantes, tasa de respuesta, nivel de adopción y comparativo PRE vs POST.',
-            arrow: 'left',
-            offsetX: 270, offsetY: -20,
-            action: function() { cargarVista('dashboard'); }
-          },
-          {
-            target: '#content-area',
-            title: 'Vista de datos en tiempo real',
-            text: 'Aquí se cargan las vistas. Ahora ves el dashboard con gráficos y métricas del programa activo.',
-            arrow: 'top',
-            offsetX: 0, offsetY: 60,
-            focusContent: true
-          },
-          {
-            target: '[data-vista="programas"]',
-            title: 'Gestión de Programas',
-            text: 'Crea y administra programas de desarrollo. Configura fechas PRE/POST, competencias y participantes.',
-            arrow: 'left',
-            offsetX: 270, offsetY: -20,
-            action: function() { cargarVista('programas'); }
-          },
-          {
-            target: '[data-vista="asistente-ia"]',
-            title: 'Asistente IA',
-            text: 'Genera informes ejecutivos y por participante con inteligencia artificial. Resultados en PDF listos para entregar al cliente.',
-            arrow: 'left',
-            offsetX: 270, offsetY: -20,
-            action: function() { cargarVista('asistente-ia'); }
-          }
-        ],
-        jefatura: [
-          {
-            target: '#sidebar',
-            title: 'Tu panel de jefatura',
-            text: 'Como jefatura, tu menú está enfocado en evaluar y acompañar a tu equipo.',
-            arrow: 'left',
-            offsetX: 270, offsetY: 0
-          },
-          {
-            target: '[data-vista="home-lider"]',
-            title: 'Inicio',
-            text: 'Vista de bienvenida con el estado del programa y accesos rápidos a tus tareas pendientes.',
-            arrow: 'left',
-            offsetX: 270, offsetY: -20,
-            action: function() { cargarVista('home-lider'); }
-          },
-          {
-            target: '[data-vista="mis-encuestas"]',
-            title: 'Mis Evaluaciones',
-            text: 'Aquí completas la coevaluación de cada participante de tu equipo usando el mismo instrumento que ellos.',
-            arrow: 'left',
-            offsetX: 270, offsetY: -20,
-            action: function() { cargarVista('mis-encuestas'); }
-          },
-          {
-            target: '[data-vista="mi-equipo"]',
-            title: 'Mi Equipo',
-            text: 'Visualiza el avance de cada persona de tu equipo: estado de evaluaciones, nivel de adopción y progreso.',
-            arrow: 'left',
-            offsetX: 270, offsetY: -20,
-            action: function() { cargarVista('mi-equipo'); }
-          },
-          {
-            target: '#content-area',
-            title: 'Seguimiento del equipo',
-            text: 'Desde aquí puedes ver el progreso de cada participante y entregar feedback estructurado.',
-            arrow: 'top',
-            offsetX: 0, offsetY: 60,
-            focusContent: true
-          }
-        ],
-        participante: [
-          {
-            target: '#sidebar',
-            title: 'Tu espacio personal',
-            text: 'Como participante, tu menú te lleva directo a tus evaluaciones, progreso y feedback.',
-            arrow: 'left',
-            offsetX: 270, offsetY: 0
-          },
-          {
-            target: '[data-vista="mis-encuestas"]',
-            title: 'Mis Encuestas',
-            text: 'Aquí completas tu autoevaluación PRE y POST. Cada respuesta se auto-guarda.',
-            arrow: 'left',
-            offsetX: 270, offsetY: -20,
-            action: function() { cargarVista('mis-encuestas'); }
-          },
-          {
-            target: '[data-vista="mi-progreso"]',
-            title: 'Mi Progreso',
-            text: 'Visualiza tu crecimiento: comparativo PRE vs POST por competencia, con gráficos claros.',
-            arrow: 'left',
-            offsetX: 270, offsetY: -20,
-            action: function() { cargarVista('mi-progreso'); }
-          },
-          {
-            target: '[data-vista="feedback-recibido"]',
-            title: 'Feedback Recibido',
-            text: 'Lee el feedback cualitativo que tu jefatura dejó sobre tu desempeño en cada competencia.',
-            arrow: 'left',
-            offsetX: 270, offsetY: -20,
-            action: function() { cargarVista('feedback-recibido'); }
-          },
-          {
-            target: '#content-area',
-            title: 'Todo en un solo lugar',
-            text: 'Cada sección se carga aquí. Navega con el menú lateral y explora libremente.',
-            arrow: 'top',
-            offsetX: 0, offsetY: 60,
-            focusContent: true
-          }
-        ]
-      };
-
-      var currentStep = 0;
-      var currentRole = null;
-      var overlayEl, highlightEl, tooltipEl;
-
-      function showWelcome(role) {
-        var rolLabels = { admin: 'Administrador', jefatura: 'Jefatura', participante: 'Participante' };
-        var rolDescriptions = {
-          admin: 'Vas a explorar el panel de administración: dashboard global, gestión de programas e informes con IA.',
-          jefatura: 'Vas a recorrer la experiencia de jefatura: evaluación de equipo, seguimiento y feedback.',
-          participante: 'Vas a ver la experiencia del participante: autoevaluación, progreso personal y feedback recibido.'
-        };
-
-        var welcome = document.createElement('div');
-        welcome.className = 'tutorial-welcome';
-        welcome.id = 'tutorial-welcome';
-        welcome.innerHTML =
-          '<div class="tutorial-welcome-card">' +
-            '<div class="role-badge">' + rolLabels[role] + '</div>' +
-            '<h2>Bienvenido a la demo</h2>' +
-            '<p>' + rolDescriptions[role] + ' Te guiaremos paso a paso por las funcionalidades principales.</p>' +
-            '<div class="tutorial-welcome-actions">' +
-              '<button class="tutorial-btn tutorial-btn-skip" onclick="tutorialSkip()">Explorar solo</button>' +
-              '<button class="tutorial-btn tutorial-btn-next" onclick="tutorialStart()">Iniciar tutorial</button>' +
-            '</div>' +
-          '</div>';
-        document.body.appendChild(welcome);
-      }
-
-      window.tutorialSkip = function() {
-        var w = document.getElementById('tutorial-welcome');
-        if (w) w.remove();
-        sessionStorage.removeItem('tpt_demo_tutorial');
-      };
-
-      window.tutorialStart = function() {
-        var w = document.getElementById('tutorial-welcome');
-        if (w) w.remove();
-
-        overlayEl = document.createElement('div');
-        overlayEl.className = 'tutorial-overlay';
-        overlayEl.id = 'tutorial-overlay';
-        document.body.appendChild(overlayEl);
-
-        highlightEl = document.createElement('div');
-        highlightEl.className = 'tutorial-highlight';
-        highlightEl.id = 'tutorial-highlight';
-        document.body.appendChild(highlightEl);
-
-        tooltipEl = document.createElement('div');
-        tooltipEl.className = 'tutorial-tooltip';
-        tooltipEl.id = 'tutorial-tooltip';
-        document.body.appendChild(tooltipEl);
-
-        currentStep = 0;
-        showStep(currentStep);
-      };
-
-      function showStep(idx) {
-        var steps = TUTORIAL_STEPS[currentRole];
-        if (!steps || idx >= steps.length) { endTutorial(); return; }
-
-        var step = steps[idx];
-
-        if (step.action) {
-          step.action();
-          setTimeout(function() { positionStep(step, idx, steps.length); }, 600);
-        } else {
-          positionStep(step, idx, steps.length);
-        }
-      }
-
-      function positionStep(step, idx, total) {
-        var target = document.querySelector(step.target);
-        if (!target) { currentStep++; showStep(currentStep); return; }
-
-        var rect = target.getBoundingClientRect();
-        var scrollY = window.scrollY || document.documentElement.scrollTop;
-        var scrollX = window.scrollX || document.documentElement.scrollLeft;
-
-        if (step.focusContent) {
-          highlightEl.style.left = (rect.left + scrollX + 8) + 'px';
-          highlightEl.style.top = (rect.top + scrollY + 8) + 'px';
-          highlightEl.style.width = Math.min(rect.width - 16, 600) + 'px';
-          highlightEl.style.height = Math.min(rect.height - 16, 300) + 'px';
-        } else {
-          highlightEl.style.left = (rect.left + scrollX - 4) + 'px';
-          highlightEl.style.top = (rect.top + scrollY - 4) + 'px';
-          highlightEl.style.width = (rect.width + 8) + 'px';
-          highlightEl.style.height = (rect.height + 8) + 'px';
-        }
-
-        var dots = '';
-        for (var i = 0; i < total; i++) {
-          var cls = i < idx ? 'done' : (i === idx ? 'active' : '');
-          dots += '<div class="tutorial-dot ' + cls + '"></div>';
-        }
-
-        var isLast = idx === total - 1;
-        tooltipEl.innerHTML =
-          '<div class="tutorial-tooltip-arrow ' + step.arrow + '"></div>' +
-          '<div class="tutorial-step-count">Paso ' + (idx + 1) + ' de ' + total + '</div>' +
-          '<h4>' + step.title + '</h4>' +
-          '<p>' + step.text + '</p>' +
-          '<div class="tutorial-actions">' +
-            '<button class="tutorial-btn tutorial-btn-skip" onclick="tutorialEnd()">Salir</button>' +
-            '<div class="tutorial-progress">' + dots + '</div>' +
-            (isLast
-              ? '<button class="tutorial-btn tutorial-btn-finish" onclick="tutorialEnd()">Finalizar</button>'
-              : '<button class="tutorial-btn tutorial-btn-next" onclick="tutorialNext()">Siguiente</button>') +
-          '</div>';
-
-        var tLeft = rect.left + scrollX + (step.offsetX || 0);
-        var tTop = rect.top + scrollY + (step.offsetY || 0);
-
-        if (step.arrow === 'left') { tLeft = rect.right + scrollX + 16; }
-        if (step.arrow === 'top') { tTop = rect.top + scrollY + (step.offsetY || 60); tLeft = rect.left + scrollX + 24; }
-
-        if (tLeft + 360 > window.innerWidth) { tLeft = window.innerWidth - 380; }
-        if (tLeft < 10) tLeft = 10;
-
-        tooltipEl.style.left = tLeft + 'px';
-        tooltipEl.style.top = tTop + 'px';
-      }
-
-      window.tutorialNext = function() {
-        currentStep++;
-        showStep(currentStep);
-      };
-
-      window.tutorialEnd = function() {
-        endTutorial();
-      };
-
-      function endTutorial() {
-        sessionStorage.removeItem('tpt_demo_tutorial');
-        var els = ['tutorial-overlay', 'tutorial-highlight', 'tutorial-tooltip'];
-        els.forEach(function(id) {
-          var el = document.getElementById(id);
-          if (el) el.remove();
-        });
-      }
-
-      // Auto-start if coming from landing
-      var origInit = document.addEventListener;
-      document.addEventListener('DOMContentLoaded', function() {
-        setTimeout(function() {
-          var demoRole = sessionStorage.getItem('tpt_demo_tutorial');
-          if (demoRole && TUTORIAL_STEPS[demoRole]) {
-            currentRole = demoRole;
-            showWelcome(demoRole);
-          }
-        }, 800);
-      });
-    })();
-  </script>
-
   <!-- Modal de Confirmacion Global (ITEM 6) -->
   <div class="modal-overlay" id="modal-confirmar">
     <div class="modal" style="max-width:440px;" onclick="event.stopPropagation()">
       <div class="modal-header">
-        <h3 id="confirmar-titulo" style="color:var(--color-error);">Confirmar accion</h3>
+        <h3 id="confirmar-titulo" style="color:var(--color-error);">Confirmar acción</h3>
         <button class="modal-close" onclick="_cerrarModalConfirmar()">&times;</button>
       </div>
       <div class="modal-body">
@@ -2198,5 +1905,212 @@ function _ejecutarConfirmacion() {
       </div>
     </div>
   </div>
+
+  <!-- ============================================
+       TOUR GUIADO DE LA DEMO
+       ============================================ -->
+  <style>
+    .tour-backdrop { position:fixed; inset:0; z-index:9990; background:rgba(20,10,30,0.55); }
+    .tour-ring {
+      position:absolute; z-index:9992; border-radius:10px; pointer-events:none;
+      box-shadow:0 0 0 3px #F58220, 0 0 0 9999px rgba(20,10,30,0.6);
+      transition:top .35s cubic-bezier(.4,0,.2,1), left .35s cubic-bezier(.4,0,.2,1), width .35s, height .35s;
+    }
+    .tour-card {
+      position:absolute; z-index:9994; width:340px; max-width:calc(100vw - 32px);
+      background:#fff; border-radius:14px; padding:22px 24px;
+      box-shadow:0 20px 60px rgba(20,10,30,.3);
+      font-family:'Inter',Arial,sans-serif; transition:top .35s cubic-bezier(.4,0,.2,1), left .35s cubic-bezier(.4,0,.2,1);
+    }
+    .tour-step { font-size:11px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:#F58220; margin-bottom:8px; }
+    .tour-card h4 { font-size:17px; font-weight:700; color:#3D0C4B; margin:0 0 8px; line-height:1.3; }
+    .tour-card p { font-size:13.5px; color:#5A6577; line-height:1.65; margin:0 0 18px; }
+    .tour-actions { display:flex; align-items:center; gap:12px; }
+    .tour-dots { display:flex; gap:5px; flex:1; }
+    .tour-dot { width:7px; height:7px; border-radius:50%; background:#E2E8F0; transition:background .2s; }
+    .tour-dot.on { background:#F58220; width:18px; border-radius:4px; }
+    .tour-dot.done { background:#B9A5C4; }
+    .tour-btn { border:none; border-radius:8px; font-family:inherit; font-size:13px; font-weight:600; cursor:pointer; padding:9px 20px; transition:filter .15s; }
+    .tour-btn:hover { filter:brightness(.94); }
+    .tour-btn-main { background:#F58220; color:#fff; }
+    .tour-btn-ghost { background:transparent; color:#8A94A4; padding:9px 4px; }
+    .tour-welcome { position:fixed; inset:0; z-index:9996; display:flex; align-items:center; justify-content:center; background:rgba(20,10,30,.72); padding:20px; }
+    .tour-welcome-card { background:#fff; border-radius:18px; padding:40px 38px; max-width:470px; width:100%; text-align:center; box-shadow:0 26px 80px rgba(20,10,30,.36); font-family:'Inter',Arial,sans-serif; }
+    .tour-badge { display:inline-block; background:rgba(245,130,32,.12); color:#F58220; font-size:11px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; padding:5px 15px; border-radius:20px; margin-bottom:18px; }
+    .tour-welcome-card h2 { font-size:23px; font-weight:700; color:#3D0C4B; margin:0 0 10px; }
+    .tour-welcome-card p { font-size:14px; color:#5A6577; line-height:1.7; margin:0 0 26px; }
+    .tour-welcome-actions { display:flex; gap:12px; justify-content:center; }
+    @media (max-width:768px) { .tour-card { width:calc(100vw - 32px); left:16px !important; } }
+  </style>
+
+  <script>
+  (function() {
+    var PASOS = {
+      admin: [
+        { sel:'#sidebar', pos:'right', t:'Menú de administración',
+          d:'Desde aquí gestionas clientes, programas, usuarios e incidencias. El menú se arma según el rol de cada persona.' },
+        { sel:'[data-vista="dashboard"]', pos:'right', vista:'dashboard', t:'Dashboard del programa',
+          d:'Indicadores en vivo: participantes, tasa de respuesta y nivel de adopción, con el comparativo PRE vs POST por competencia.' },
+        { sel:'[data-vista="programas"]', pos:'right', vista:'programas', t:'Gestión de programas',
+          d:'Cada programa tiene su panel con participantes, competencias, encuestas, cronograma e informes. Entra a uno para verlo.' },
+        { sel:'[data-vista="usuarios"]', pos:'right', vista:'usuarios', t:'Usuarios',
+          d:'Alta de líderes y colaboradores, asignación de jefatura directa y control de acceso.' },
+        { sel:'[data-vista="gestion-observaciones"]', pos:'right', vista:'gestion-observaciones', t:'Incidencias',
+          d:'Las consultas y problemas que reportan los participantes llegan acá para su seguimiento y cierre.' },
+        { sel:'#content-area', pos:'below', t:'Explora con libertad',
+          d:'Ya conoces lo esencial. Todo lo que hagas se guarda en tu navegador; puedes restaurar los datos originales cuando quieras.' }
+      ],
+      jefatura: [
+        { sel:'#sidebar', pos:'right', t:'Tu espacio como líder',
+          d:'Como jefatura te evalúas a ti y recibes la mirada de tu equipo. Este es el modelo 360 del programa.' },
+        { sel:'[data-vista="mi-programa"]', pos:'right', vista:'mi-programa', t:'Mi Programa',
+          d:'El estado de tu programa: en qué etapa estás, qué se viene y qué tienes pendiente.' },
+        { sel:'[data-vista="mis-encuestas"]', pos:'right', vista:'mis-encuestas', t:'Mis Evaluaciones',
+          d:'Acá completas tu autoevaluación en cada competencia. Se guarda a medida que respondes.' },
+        { sel:'[data-vista="mi-equipo"]', pos:'right', vista:'mi-equipo', t:'Mi Equipo',
+          d:'Las personas que te reportan y que responden tu coevaluación. Sus respuestas son confidenciales y se reportan agregadas.' },
+        { sel:'[data-vista="mi-informe"]', pos:'right', vista:'mi-informe', t:'Mi Informe',
+          d:'Tu informe individual: cómo te ves tú, cómo te ve tu equipo, y la brecha entre ambas miradas.' },
+        { sel:'#content-area', pos:'below', t:'Todo listo',
+          d:'Ese es el recorrido de una jefatura en el programa. Puedes seguir explorando por tu cuenta.' }
+      ],
+      participante: [
+        { sel:'#sidebar', pos:'right', t:'Tu espacio de colaborador',
+          d:'Como colaborador, tu rol es evaluar a tu jefatura directa. Tus respuestas son confidenciales.' },
+        { sel:'[data-vista="mi-programa"]', pos:'right', vista:'mi-programa', t:'Mi Programa',
+          d:'El estado del programa en el que participas y las etapas que se vienen.' },
+        { sel:'[data-vista="mis-encuestas"]', pos:'right', vista:'mis-encuestas', t:'Mis Encuestas',
+          d:'Acá evalúas a tu jefatura en cada competencia, eligiendo el nivel que mejor describe lo que observas en el día a día.' },
+        { sel:'[data-vista="mis-recursos"]', pos:'right', vista:'mis-recursos', t:'Archivos y Recursos',
+          d:'El material del programa: guías, presentaciones de los talleres y bitácoras de práctica.' },
+        { sel:'#content-area', pos:'below', t:'Listo para explorar',
+          d:'Ese es el recorrido de un colaborador. Sigue navegando con el menú lateral.' }
+      ]
+    };
+
+    var paso = 0, rol = null, backdrop, ring, card;
+
+    function bienvenida(r) {
+      var titulos = { admin:'Administrador', jefatura:'Jefatura', participante:'Colaborador' };
+      var textos = {
+        admin:'Verás el panel de administración completo: dashboard con indicadores, gestión de programas, usuarios e informes.',
+        jefatura:'Verás la experiencia de una jefatura: su autoevaluación, su equipo y el informe con la mirada 360.',
+        participante:'Verás la experiencia de un colaborador: cómo evalúa a su jefatura y accede al material del programa.'
+      };
+      var el = document.createElement('div');
+      el.className = 'tour-welcome';
+      el.id = 'tour-welcome';
+      el.innerHTML =
+        '<div class="tour-welcome-card">' +
+          '<div class="tour-badge">' + titulos[r] + '</div>' +
+          '<h2>Bienvenido a la demo</h2>' +
+          '<p>' + textos[r] + ' Te mostramos lo esencial en un recorrido corto.</p>' +
+          '<div class="tour-welcome-actions">' +
+            '<button class="tour-btn tour-btn-ghost" onclick="tourSaltar()">Explorar por mi cuenta</button>' +
+            '<button class="tour-btn tour-btn-main" onclick="tourIniciar()">Comenzar recorrido</button>' +
+          '</div>' +
+        '</div>';
+      document.body.appendChild(el);
+    }
+
+    window.tourSaltar = function() {
+      var w = document.getElementById('tour-welcome');
+      if (w) w.remove();
+      sessionStorage.removeItem('tpt_demo_tour');
+    };
+
+    window.tourIniciar = function() {
+      var w = document.getElementById('tour-welcome');
+      if (w) w.remove();
+      backdrop = document.createElement('div'); backdrop.className = 'tour-backdrop';
+      ring = document.createElement('div'); ring.className = 'tour-ring';
+      card = document.createElement('div'); card.className = 'tour-card';
+      document.body.appendChild(backdrop);
+      document.body.appendChild(ring);
+      document.body.appendChild(card);
+      paso = 0;
+      mostrar();
+    };
+
+    window.tourSiguiente = function() { paso++; mostrar(); };
+
+    window.tourCerrar = function() {
+      sessionStorage.removeItem('tpt_demo_tour');
+      [backdrop, ring, card].forEach(function(el) { if (el && el.parentNode) el.remove(); });
+    };
+
+    function mostrar() {
+      var pasos = PASOS[rol];
+      if (!pasos || paso >= pasos.length) return tourCerrar();
+      var p = pasos[paso];
+      if (p.vista && typeof cargarVista === 'function') {
+        cargarVista(p.vista);
+        setTimeout(function() { ubicar(p, pasos.length); }, 550);
+      } else {
+        ubicar(p, pasos.length);
+      }
+    }
+
+    function ubicar(p, total) {
+      var el = document.querySelector(p.sel);
+      if (!el) { paso++; return mostrar(); }
+
+      var r = el.getBoundingClientRect();
+      var sy = window.scrollY || 0, sx = window.scrollX || 0;
+      var esContenido = p.sel === '#content-area';
+
+      var top = r.top + sy - 4, left = r.left + sx - 4;
+      var w = r.width + 8, h = r.height + 8;
+      if (esContenido) { h = Math.min(h, 260); }
+
+      ring.style.top = top + 'px';
+      ring.style.left = left + 'px';
+      ring.style.width = w + 'px';
+      ring.style.height = h + 'px';
+
+      var dots = '';
+      for (var i = 0; i < total; i++) {
+        dots += '<div class="tour-dot ' + (i < paso ? 'done' : (i === paso ? 'on' : '')) + '"></div>';
+      }
+      var ultimo = paso === total - 1;
+      card.innerHTML =
+        '<div class="tour-step">Paso ' + (paso + 1) + ' de ' + total + '</div>' +
+        '<h4>' + p.t + '</h4>' +
+        '<p>' + p.d + '</p>' +
+        '<div class="tour-actions">' +
+          '<div class="tour-dots">' + dots + '</div>' +
+          (ultimo
+            ? '<button class="tour-btn tour-btn-main" onclick="tourCerrar()">Finalizar</button>'
+            : '<button class="tour-btn tour-btn-ghost" onclick="tourCerrar()">Salir</button>' +
+              '<button class="tour-btn tour-btn-main" onclick="tourSiguiente()">Siguiente</button>') +
+        '</div>';
+
+      var cw = 340, ch = card.offsetHeight || 200, gap = 18;
+      var ct, cl;
+      if (p.pos === 'right') {
+        cl = r.right + sx + gap;
+        ct = r.top + sy - 8;
+      } else {
+        cl = r.left + sx + 28;
+        ct = r.top + sy + 40;
+      }
+      if (cl + cw > window.innerWidth - 12) cl = window.innerWidth - cw - 12;
+      if (cl < 12) cl = 12;
+      var maxTop = sy + window.innerHeight - ch - 16;
+      if (ct > maxTop) ct = maxTop;
+      if (ct < sy + 12) ct = sy + 12;
+      card.style.left = cl + 'px';
+      card.style.top = ct + 'px';
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+      setTimeout(function() {
+        var r = sessionStorage.getItem('tpt_demo_tour');
+        if (r === 'colaborador') r = 'participante';
+        if (r && PASOS[r]) { rol = r; bienvenida(r); }
+      }, 1100);
+    });
+  })();
+  </script>
 </body>
 </html>

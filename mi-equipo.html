@@ -22,10 +22,10 @@
 </div>
 
 <script>
-  (function() {
-    var esAdmin = App.getRol && App.getRol() === 'admin';
-    var userId = App.usuario ? App.usuario.id : null;
+  var esAdmin = App.getRol && App.getRol() === 'admin';
+  var userId = App.usuario ? App.usuario.id : null;
 
+  (function() {
     google.script.run.withSuccessHandler(function(r) {
       if (r.success) {
         var sel = document.getElementById('sel-programa-equipo');
@@ -67,11 +67,21 @@
         return;
       }
 
-      var participantes = rPart.data.filter(function(p) { return p.rol_programa === 'participante'; });
+      var todosParticipantes = rPart.data || [];
+      var participantes;
+      if (esAdmin) {
+        // Admin ve todos los colaboradores
+        participantes = todosParticipantes.filter(function(p) { return p.rol_programa === 'colaborador'; });
+      } else {
+        // Lider solo ve sus colaboradores asignados
+        participantes = todosParticipantes.filter(function(p) {
+          return p.rol_programa === 'colaborador' && p.lider_id === userId;
+        });
+      }
 
       if (participantes.length === 0) {
         document.getElementById('equipo-lista').innerHTML =
-          '<div class="empty-state"><p>No tienes participantes asignados en este programa.</p></div>';
+          '<div class="empty-state"><p>No tienes colaboradores asignados en este programa.</p></div>';
         return;
       }
 
@@ -99,9 +109,11 @@
       }).withFailureHandler(function() { renderWhenReady(); })
       .listarFeedbackEquipo(App.token, progId);
 
-    }).withFailureHandler(function() {
+    }).withFailureHandler(function(err) {
+      console.error('[mi-equipo] listarParticipantesPrograma failed', err);
+      var msg = (err && err.message) ? err.message : 'Error al cargar equipo.';
       document.getElementById('equipo-lista').innerHTML =
-        '<div class="empty-state"><p>Error al cargar equipo.</p></div>';
+        '<div class="empty-state"><p>' + escapeHtml(msg) + '</p></div>';
     }).listarParticipantesPrograma(App.token, progId);
   }
 
@@ -137,19 +149,13 @@
               '<h3 style="font-size:16px;color:var(--color-primario);">' + escapeHtml(p.nombre) + '</h3>' +
               '<p class="text-sm text-muted">' + escapeHtml(p.cargo || 'Sin cargo') + '</p>' +
             '</div>' +
-            '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">' +
-              '<div style="background:var(--color-fondo-alt);padding:8px 12px;border-radius:6px;text-align:center;">' +
-                '<div class="text-xs text-muted">Observaciones</div>' +
-                '<div style="font-size:20px;font-weight:700;color:var(--color-primario);">' + numObs + '</div>' +
-              '</div>' +
+            '<div style="margin-bottom:12px;">' +
               '<div style="background:var(--color-fondo-alt);padding:8px 12px;border-radius:6px;text-align:center;">' +
                 '<div class="text-xs text-muted">Feedback</div>' +
                 '<div style="font-size:20px;font-weight:700;color:var(--color-primario);">' + numFb + '</div>' +
               '</div>' +
             '</div>' +
-            '<p class="text-xs text-muted mb-3">Ultima observacion: ' + ultimaObs + '</p>' +
             '<div style="display:flex;gap:8px;">' +
-              '<button class="btn btn-sm btn-outline" style="flex:1;" onclick="irAObservar(\'' + progId + '\')">Observar</button>' +
               '<button class="btn btn-sm btn-secondary" style="flex:1;" onclick="irAFeedback(\'' + progId + '\', \'' + p.id + '\')">Dar Feedback</button>' +
             '</div>' +
           '</div>' +
@@ -166,9 +172,11 @@
   }
 
   function irAFeedback(progId, partId) {
-    // Navegar a la vista de feedback
+    try {
+      sessionStorage.setItem('tpt_feedback_target', JSON.stringify({ programaId: progId, participanteId: partId }));
+    } catch (e) {}
     if (typeof cargarVista === 'function') {
-      cargarVista('feedback-jefatura');
+      cargarVista('feedback');
     }
   }
 </script>

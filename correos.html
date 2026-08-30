@@ -73,10 +73,11 @@
           <label>Destinatarios *</label>
           <div id="destinatarios-tags" class="tags-container"></div>
           <div style="display:flex;gap:8px;margin-top:8px;">
-            <input type="email" class="form-control" id="input-destinatario" placeholder="Agregar email..." style="flex:1;">
+            <input type="email" class="form-control" id="input-destinatario" placeholder="Agregar email manual..." style="flex:1;">
             <button class="btn btn-sm btn-outline" onclick="agregarDestinatario()">+ Agregar</button>
           </div>
-          <div id="destinatarios-sugeridos" class="mt-2"></div>
+          <div id="destinatarios-quickactions" class="mt-2" style="display:flex;gap:8px;flex-wrap:wrap;"></div>
+          <div id="destinatarios-sugeridos" class="mt-3"></div>
         </div>
 
         <!-- Asunto -->
@@ -402,11 +403,13 @@
 
 <script>
   var correoProgramaSeleccionado = null;
-  var correoDestinatarios = [];
+  var correoDestinatarios = []; // [{usuario_id?, email, nombre?, source}]
   var correoAdjuntos = [];
   var correoTemplateActual = null;
   var correosEnviados = [];
   var programasCorreo = [];
+  var participantesPrograma = []; // participantes del programa seleccionado
+  var contactoClienteCache = null; // {nombre, email} o null
 
   (function() {
     google.script.run.withSuccessHandler(function(r) {
@@ -438,7 +441,24 @@
     correoProgramaSeleccionado = programasCorreo.find(function(p) { return p.id === progId; });
     document.getElementById('correo-empty').classList.add('hidden');
 
-    // Cargar historial mock
+    // Cargar participantes del programa y contacto del cliente (para el selector)
+    participantesPrograma = [];
+    contactoClienteCache = null;
+    google.script.run.withSuccessHandler(function(r) {
+      if (r && r.success) participantesPrograma = r.data || [];
+      refrescarSugeridosSiAbierto();
+    }).listarParticipantesPrograma(App.token, progId);
+
+    google.script.run.withSuccessHandler(function(r) {
+      if (r && r.success && r.data) {
+        var cli = r.data.find(function(c) { return c.id === correoProgramaSeleccionado.cliente_id; });
+        if (cli && cli.contacto_email) {
+          contactoClienteCache = { nombre: cli.contacto_nombre || cli.contacto_email, email: cli.contacto_email };
+        }
+      }
+      refrescarSugeridosSiAbierto();
+    }).listarClientes(App.token);
+
     cargarHistorialCorreos(progId);
   }
 
@@ -530,7 +550,7 @@
             '<li>Participantes activos en el proceso</li>' +
             '<li>Actividades completadas seg\u00fan calendario</li>' +
             '<li>Observaciones de campo realizadas</li>' +
-            '<li>Feedback entregado por jefaturas</li>' +
+            '<li>Feedback entregado por l&iacute;deres</li>' +
           '</ul>' +
           '<p><strong>Pr\u00f3ximos hitos:</strong></p>' +
           '<ol>' +
@@ -561,7 +581,7 @@
             '<li>Comparaci\u00f3n PRE vs POST: Se evidencia evoluci\u00f3n en las conductas cr\u00edticas medidas</li>' +
             '<li>Nivel de participaci\u00f3n: Alto compromiso de los participantes durante el proceso</li>' +
             '<li>Observaciones de campo: Se registraron observaciones que evidencian transferencia al puesto</li>' +
-            '<li>Feedback de jefaturas: Retroalimentaci\u00f3n positiva sobre los cambios observados</li>' +
+            '<li>Feedback de l&iacute;deres: Retroalimentaci\u00f3n positiva sobre los cambios observados</li>' +
           '</ul>' +
           '<p><strong>Recomendaciones:</strong></p>' +
           '<ol>' +
@@ -598,67 +618,181 @@
     renderDestinatarios();
     renderAdjuntos();
 
-    // Sugerir contacto del cliente
-    renderSugeridos(prog);
+    // Mostrar selector de destinatarios (participantes + contacto cliente)
+    renderSugeridos();
   }
 
   // ============================================
   // DESTINATARIOS
   // ============================================
 
-  function renderSugeridos(prog) {
-    var div = document.getElementById('destinatarios-sugeridos');
-    var cliente = null;
+  function refrescarSugeridosSiAbierto() {
+    var compositor = document.getElementById('correo-compositor');
+    if (compositor && !compositor.classList.contains('hidden')) {
+      renderSugeridos();
+    }
+  }
 
-    // Buscar email del contacto del cliente
-    fetch('/api/mock', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ fn: 'listarClientes', args: [App.token] })
-    })
-    .then(function(r) { return r.json(); })
-    .then(function(r) {
-      if (r.success && r.data) {
-        cliente = r.data.find(function(c) { return c.id === prog.cliente_id; });
-        if (cliente && cliente.contacto_email) {
-          div.innerHTML = '<div class="text-xs text-muted mb-1">Contacto del cliente:</div>' +
-            '<button class="btn btn-sm btn-outline" onclick="agregarDestinatarioDirecto(\'' + cliente.contacto_email + '\')">' +
-            '+ ' + escapeHtml(cliente.contacto_nombre) + ' (' + escapeHtml(cliente.contacto_email) + ')' +
-            '</button>';
-        }
-      }
-    }).catch(function() {});
+  function renderSugeridos() {
+    var div = document.getElementById('destinatarios-sugeridos');
+    var quick = document.getElementById('destinatarios-quickactions');
+    var lideres = participantesPrograma.filter(function(p) { return p.rol_programa === 'lider'; });
+    var colaboradores = participantesPrograma.filter(function(p) { return p.rol_programa === 'colaborador'; });
+
+    // Acciones rapidas
+    var qa = [];
+    if (lideres.length + colaboradores.length > 0) {
+      qa.push('<button class="btn btn-sm btn-outline" onclick="agregarTodosPrograma()">+ Todos del programa (' + (lideres.length + colaboradores.length) + ')</button>');
+    }
+    if (lideres.length > 0) {
+      qa.push('<button class="btn btn-sm btn-outline" onclick="agregarTodosRol(\'lider\')">+ Todos los l\u00edderes (' + lideres.length + ')</button>');
+    }
+    if (colaboradores.length > 0) {
+      qa.push('<button class="btn btn-sm btn-outline" onclick="agregarTodosRol(\'colaborador\')">+ Todos los colaboradores (' + colaboradores.length + ')</button>');
+    }
+    if (contactoClienteCache) {
+      qa.push('<button class="btn btn-sm btn-outline" onclick="agregarContactoCliente()">+ Contacto cliente (' + escapeHtml(contactoClienteCache.nombre) + ')</button>');
+    }
+    qa.push('<button class="btn btn-sm btn-outline" style="border-color:var(--color-peligro);color:var(--color-peligro);" onclick="limpiarDestinatarios()">\u00d7 Limpiar</button>');
+    quick.innerHTML = qa.join('');
+
+    // Listado detallado por rol
+    var html = '';
+    if (lideres.length > 0) {
+      html += '<div class="text-xs text-muted mb-1" style="margin-top:8px;">L\u00edderes del programa:</div>';
+      html += '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;">';
+      html += lideres.map(function(p) { return renderChipParticipante(p); }).join('');
+      html += '</div>';
+    }
+    if (colaboradores.length > 0) {
+      html += '<div class="text-xs text-muted mb-1">Colaboradores del programa:</div>';
+      html += '<div style="display:flex;flex-wrap:wrap;gap:6px;">';
+      html += colaboradores.map(function(p) { return renderChipParticipante(p); }).join('');
+      html += '</div>';
+    }
+    if (!lideres.length && !colaboradores.length) {
+      html += '<div class="text-xs text-muted">Este programa no tiene participantes cargados.</div>';
+    }
+    div.innerHTML = html;
+  }
+
+  function renderChipParticipante(p) {
+    var email = p.email || '';
+    if (!email) return '';
+    var yaSeleccionado = correoDestinatarios.some(function(d) { return d.email === email; });
+    var estilo = yaSeleccionado
+      ? 'background:var(--color-primario);color:#fff;border-color:var(--color-primario);opacity:0.6;cursor:default;'
+      : 'cursor:pointer;';
+    var handler = yaSeleccionado ? '' : ' onclick="agregarDestinatarioParticipante(\'' + p.usuario_id + '\')"';
+    return '<span class="tag" style="' + estilo + '"' + handler + ' title="' + escapeHtml(email) + '">' +
+      (yaSeleccionado ? '\u2713 ' : '+ ') +
+      escapeHtml(p.nombre || email) +
+      (p.cargo ? ' <span class="text-xs" style="opacity:0.7;">(' + escapeHtml(p.cargo) + ')</span>' : '') +
+    '</span>';
   }
 
   function agregarDestinatario() {
     var input = document.getElementById('input-destinatario');
-    var email = input.value.trim();
-    if (!email || correoDestinatarios.indexOf(email) !== -1) return;
+    var email = (input.value || '').trim();
+    if (!email) return;
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       showToast('Email inv\u00e1lido.', 'error');
       return;
     }
-    correoDestinatarios.push(email);
+    if (correoDestinatarios.some(function(d) { return d.email === email; })) {
+      input.value = '';
+      return;
+    }
+    correoDestinatarios.push({ email: email, nombre: email, source: 'manual' });
     input.value = '';
     renderDestinatarios();
+    renderSugeridos();
   }
 
-  function agregarDestinatarioDirecto(email) {
-    if (correoDestinatarios.indexOf(email) !== -1) return;
-    correoDestinatarios.push(email);
+  function agregarDestinatarioParticipante(usuarioId) {
+    var p = participantesPrograma.find(function(x) { return x.usuario_id === usuarioId; });
+    if (!p || !p.email) return;
+    if (correoDestinatarios.some(function(d) { return d.email === p.email; })) return;
+    correoDestinatarios.push({
+      usuario_id: p.usuario_id,
+      email: p.email,
+      nombre: p.nombre || p.email,
+      source: p.rol_programa || 'participante'
+    });
     renderDestinatarios();
+    renderSugeridos();
+  }
+
+  function agregarTodosRol(rol) {
+    var count = 0;
+    participantesPrograma.forEach(function(p) {
+      if (p.rol_programa !== rol || !p.email) return;
+      if (correoDestinatarios.some(function(d) { return d.email === p.email; })) return;
+      correoDestinatarios.push({
+        usuario_id: p.usuario_id,
+        email: p.email,
+        nombre: p.nombre || p.email,
+        source: rol
+      });
+      count++;
+    });
+    renderDestinatarios();
+    renderSugeridos();
+    if (count > 0) showToast('Agregados ' + count + ' destinatario(s)', 'success');
+  }
+
+  function agregarTodosPrograma() {
+    var count = 0;
+    participantesPrograma.forEach(function(p) {
+      if (!p.email) return;
+      if (correoDestinatarios.some(function(d) { return d.email === p.email; })) return;
+      correoDestinatarios.push({
+        usuario_id: p.usuario_id,
+        email: p.email,
+        nombre: p.nombre || p.email,
+        source: p.rol_programa || 'participante'
+      });
+      count++;
+    });
+    renderDestinatarios();
+    renderSugeridos();
+    if (count > 0) showToast('Agregados ' + count + ' destinatario(s)', 'success');
+  }
+
+  function agregarContactoCliente() {
+    if (!contactoClienteCache) return;
+    if (correoDestinatarios.some(function(d) { return d.email === contactoClienteCache.email; })) return;
+    correoDestinatarios.push({
+      email: contactoClienteCache.email,
+      nombre: contactoClienteCache.nombre,
+      source: 'cliente'
+    });
+    renderDestinatarios();
+    renderSugeridos();
+  }
+
+  function limpiarDestinatarios() {
+    correoDestinatarios = [];
+    renderDestinatarios();
+    renderSugeridos();
   }
 
   function eliminarDestinatario(email) {
-    correoDestinatarios = correoDestinatarios.filter(function(e) { return e !== email; });
+    correoDestinatarios = correoDestinatarios.filter(function(d) { return d.email !== email; });
     renderDestinatarios();
+    renderSugeridos();
   }
 
   function renderDestinatarios() {
     var div = document.getElementById('destinatarios-tags');
-    div.innerHTML = correoDestinatarios.map(function(email) {
-      return '<span class="tag">' + escapeHtml(email) +
-        ' <span class="tag-remove" onclick="eliminarDestinatario(\'' + escapeHtml(email) + '\')">&times;</span></span>';
+    if (correoDestinatarios.length === 0) {
+      div.innerHTML = '<span class="text-xs text-muted">A\u00fan no hay destinatarios. Usa los botones de abajo para agregar.</span>';
+      return;
+    }
+    div.innerHTML = correoDestinatarios.map(function(d) {
+      return '<span class="tag">' + escapeHtml(d.nombre || d.email) +
+        ' <span class="text-xs text-muted" style="opacity:0.7;">&lt;' + escapeHtml(d.email) + '&gt;</span>' +
+        ' <span class="tag-remove" onclick="eliminarDestinatario(\'' + escapeHtml(d.email) + '\')">&times;</span></span>';
     }).join('');
   }
 
@@ -746,7 +880,7 @@
     html += '<div class="preview-header">';
     html += '<div style="margin-bottom:8px;"><span class="text-xs text-muted">De:</span> <span class="text-sm">Procesos 360 - Plataforma TPT &lt;noreply@procesos360.cl&gt;</span></div>';
     html += '<div style="margin-bottom:8px;"><span class="text-xs text-muted">Para:</span> <span class="text-sm">' +
-      (correoDestinatarios.length > 0 ? correoDestinatarios.map(function(e) { return escapeHtml(e); }).join(', ') : '<em class="text-muted">Sin destinatarios</em>') +
+      (correoDestinatarios.length > 0 ? correoDestinatarios.map(function(d) { return escapeHtml(d.email); }).join(', ') : '<em class="text-muted">Sin destinatarios</em>') +
       '</span></div>';
     html += '<div><span class="text-xs text-muted">Asunto:</span> <strong class="text-sm">' + escapeHtml(asunto) + '</strong></div>';
     html += '</div>';
@@ -781,41 +915,63 @@
 
     if (!asunto) { showToast('Escribe un asunto.', 'error'); return; }
     if (correoDestinatarios.length === 0) { showToast('Agrega al menos un destinatario.', 'error'); return; }
-    if (!cuerpo.trim()) { showToast('El correo est\u00e1 vac\u00edo.', 'error'); return; }
+    if (!cuerpo.trim()) { showToast('El correo esta vacio.', 'error'); return; }
+    if (!correoProgramaSeleccionado) { showToast('Selecciona un programa.', 'error'); return; }
 
     var btn = document.getElementById('btn-enviar-correo');
     btnLoading(btn, true);
 
-    // Simular env\u00edo (mock)
-    setTimeout(function() {
+    // Adjuntos -> base64 para enviar a la Edge Function
+    var adjuntosPromises = (correoAdjuntos || []).map(function(a) {
+      if (a.contenido) return Promise.resolve(a); // ya codificado
+      if (!a.file) return Promise.resolve({ nombre: a.nombre, tipo: a.tipo });
+      return new Promise(function(resolve, reject) {
+        var reader = new FileReader();
+        reader.onload = function(e) {
+          var base64 = (e.target.result || '').split(',')[1] || '';
+          resolve({ nombre: a.nombre || a.file.name, tipo: a.tipo || a.file.type, contenido: base64 });
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(a.file);
+      });
+    });
+
+    Promise.all(adjuntosPromises).then(function(adjuntosList) {
+      google.script.run
+        .withSuccessHandler(function(r) {
+          btnLoading(btn, false);
+          if (r && r.success) {
+            var msg = 'Correo enviado a ' + (r.enviados || 0) + ' destinatario(s)';
+            if (r.fallidos && r.fallidos > 0) msg += ' (' + r.fallidos + ' fallidos)';
+            showToast(msg, r.fallidos ? 'warning' : 'success');
+            cargarHistorialCorreos(correoProgramaSeleccionado.id);
+            // Limpiar compositor
+            document.getElementById('correo-compositor').classList.add('hidden');
+            document.getElementById('correo-templates').classList.add('hidden');
+            correoDestinatarios = [];
+            correoAdjuntos = [];
+            correoTemplateActual = null;
+          } else {
+            showToast((r && r.error) || 'Error al enviar correo', 'error');
+          }
+        })
+        .withFailureHandler(function(err) {
+          btnLoading(btn, false);
+          showToast('Error de conexion: ' + (err.message || err), 'error');
+        })
+        .enviarCorreoManual(App.token, {
+          programa_id: correoProgramaSeleccionado.id,
+          asunto: asunto,
+          cuerpo_html: cuerpo,
+          destinatarios_custom: correoDestinatarios.map(function(d) {
+            return { usuario_id: d.usuario_id || null, email: d.email, nombre: d.nombre || d.email };
+          }),
+          adjuntos: adjuntosList
+        });
+    }).catch(function(e) {
       btnLoading(btn, false);
-
-      // Guardar en historial local
-      var nuevoCorreo = {
-        id: 'mail-' + Date.now(),
-        fecha: new Date().toISOString().split('T')[0],
-        template: correoTemplateActual,
-        template_nombre: TEMPLATES[correoTemplateActual].nombre,
-        asunto: asunto,
-        programa_id: correoProgramaSeleccionado.id,
-        programa_nombre: correoProgramaSeleccionado.nombre,
-        destinatarios: correoDestinatarios.slice(),
-        adjuntos: correoAdjuntos.slice(),
-        cuerpo: cuerpo
-      };
-
-      correosEnviados.unshift(nuevoCorreo);
-      renderHistorialCorreos();
-
-      showToast('Correo enviado exitosamente a ' + correoDestinatarios.length + ' destinatario(s).', 'success');
-
-      // Volver al estado inicial
-      document.getElementById('correo-compositor').classList.add('hidden');
-      document.getElementById('correo-templates').classList.add('hidden');
-      correoDestinatarios = [];
-      correoAdjuntos = [];
-      correoTemplateActual = null;
-    }, 1500);
+      showToast('Error al procesar adjuntos: ' + e.message, 'error');
+    });
   }
 
   // ============================================
@@ -823,42 +979,16 @@
   // ============================================
 
   function cargarHistorialCorreos(progId) {
-    // Mock: agregar algunos correos de ejemplo
-    if (correosEnviados.length === 0) {
-      correosEnviados = [
-        {
-          id: 'mail-001',
-          fecha: '2026-03-15',
-          template: 'presentacion',
-          template_nombre: 'Presentaci\u00f3n de Programa',
-          asunto: 'Presentaci\u00f3n del Programa: Liderazgo Seguro 2026',
-          programa_id: 'prog-001',
-          programa_nombre: 'Liderazgo Seguro 2026',
-          destinatarios: ['mgonzalez@losandes.cl'],
-          adjuntos: [
-            { nombre: 'Presentaci\u00f3n Programa.pptx', tamano: 432039, tipo: 'application/pptx' },
-            { nombre: 'Matriz de competencias.xlsx', tamano: 12406, tipo: 'application/xlsx' }
-          ],
-          cuerpo: '<p>Correo de presentaci\u00f3n enviado al cliente.</p>'
-        },
-        {
-          id: 'mail-002',
-          fecha: '2026-01-20',
-          template: 'bienvenida',
-          template_nombre: 'Inicio / Bienvenida',
-          asunto: 'Bienvenido/a al Programa Liderazgo Seguro 2026',
-          programa_id: 'prog-001',
-          programa_nombre: 'Liderazgo Seguro 2026',
-          destinatarios: ['mgonzalez@losandes.cl', 'rrhh@losandes.cl'],
-          adjuntos: [
-            { nombre: 'Instructivo pr\u00e1ctica.pdf', tamano: 250948, tipo: 'application/pdf' },
-            { nombre: 'Gantt del programa.xlsx', tamano: 16685, tipo: 'application/xlsx' }
-          ],
-          cuerpo: '<p>Correo de bienvenida enviado.</p>'
-        }
-      ];
-    }
-    renderHistorialCorreos();
+    google.script.run
+      .withSuccessHandler(function(r) {
+        correosEnviados = (r && r.success && r.data) ? r.data : [];
+        renderHistorialCorreos();
+      })
+      .withFailureHandler(function() {
+        correosEnviados = [];
+        renderHistorialCorreos();
+      })
+      .listarCorreosEnviados(App.token, progId || null);
   }
 
   function getTemplateBadge(tipo) {
