@@ -160,6 +160,9 @@
   /* Contenido Principal */
   .main-content {
     flex: 1;
+    /* Sin esto, min-width:auto impide que el area se encoja y las tablas
+       anchas desbordan la ventana en vez de scrollear dentro de su contenedor */
+    min-width: 0;
     margin-left: 260px;
     display: flex;
     flex-direction: column;
@@ -1906,91 +1909,378 @@ function _ejecutarConfirmacion() {
     </div>
   </div>
 
+
   <!-- ============================================
-       TOUR GUIADO DE LA DEMO
+       TOURS GUIADOS DE LA DEMO
+       Motor unico que soporta: recorrido por rol (sidebar)
+       y recorrido detallado del modulo de programas (tabs).
        ============================================ -->
   <style>
-    .tour-backdrop { position:fixed; inset:0; z-index:9990; background:rgba(20,10,30,0.55); }
     .tour-ring {
-      position:absolute; z-index:9992; border-radius:10px; pointer-events:none;
-      box-shadow:0 0 0 3px #F58220, 0 0 0 9999px rgba(20,10,30,0.6);
-      transition:top .35s cubic-bezier(.4,0,.2,1), left .35s cubic-bezier(.4,0,.2,1), width .35s, height .35s;
+      position:fixed; z-index:9992; border-radius:10px; pointer-events:none;
+      box-shadow:0 0 0 3px #F58220, 0 0 0 9999px rgba(20,10,30,0.62);
+      transition:top .3s cubic-bezier(.4,0,.2,1), left .3s cubic-bezier(.4,0,.2,1), width .3s, height .3s;
     }
     .tour-card {
-      position:absolute; z-index:9994; width:340px; max-width:calc(100vw - 32px);
+      position:fixed; z-index:9994; width:350px; max-width:calc(100vw - 32px);
       background:#fff; border-radius:14px; padding:22px 24px;
-      box-shadow:0 20px 60px rgba(20,10,30,.3);
-      font-family:'Inter',Arial,sans-serif; transition:top .35s cubic-bezier(.4,0,.2,1), left .35s cubic-bezier(.4,0,.2,1);
+      box-shadow:0 20px 60px rgba(20,10,30,.32);
+      font-family:'Inter',Arial,sans-serif;
+      transition:top .3s cubic-bezier(.4,0,.2,1), left .3s cubic-bezier(.4,0,.2,1);
     }
     .tour-step { font-size:11px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:#F58220; margin-bottom:8px; }
     .tour-card h4 { font-size:17px; font-weight:700; color:#3D0C4B; margin:0 0 8px; line-height:1.3; }
     .tour-card p { font-size:13.5px; color:#5A6577; line-height:1.65; margin:0 0 18px; }
-    .tour-actions { display:flex; align-items:center; gap:12px; }
-    .tour-dots { display:flex; gap:5px; flex:1; }
-    .tour-dot { width:7px; height:7px; border-radius:50%; background:#E2E8F0; transition:background .2s; }
-    .tour-dot.on { background:#F58220; width:18px; border-radius:4px; }
-    .tour-dot.done { background:#B9A5C4; }
-    .tour-btn { border:none; border-radius:8px; font-family:inherit; font-size:13px; font-weight:600; cursor:pointer; padding:9px 20px; transition:filter .15s; }
+    .tour-card p strong { color:#3D0C4B; }
+    .tour-actions { display:flex; align-items:center; gap:10px; }
+    .tour-dots { display:flex; gap:4px; flex:1; flex-wrap:wrap; }
+    .tour-dot { width:6px; height:6px; border-radius:50%; background:#E2E8F0; transition:all .2s; }
+    .tour-dot.on { background:#F58220; width:16px; border-radius:3px; }
+    .tour-dot.done { background:#C4B2CE; }
+    .tour-btn { border:none; border-radius:8px; font-family:inherit; font-size:13px; font-weight:600; cursor:pointer; padding:9px 18px; transition:filter .15s; }
     .tour-btn:hover { filter:brightness(.94); }
     .tour-btn-main { background:#F58220; color:#fff; }
     .tour-btn-ghost { background:transparent; color:#8A94A4; padding:9px 4px; }
+    .tour-loading { display:flex; align-items:center; gap:8px; font-size:12.5px; color:#8A94A4; }
+    .tour-spin { width:13px; height:13px; border:2px solid #E2E8F0; border-top-color:#F58220; border-radius:50%; animation:tourspin .7s linear infinite; }
+    @keyframes tourspin { to { transform:rotate(360deg); } }
+
     .tour-welcome { position:fixed; inset:0; z-index:9996; display:flex; align-items:center; justify-content:center; background:rgba(20,10,30,.72); padding:20px; }
-    .tour-welcome-card { background:#fff; border-radius:18px; padding:40px 38px; max-width:470px; width:100%; text-align:center; box-shadow:0 26px 80px rgba(20,10,30,.36); font-family:'Inter',Arial,sans-serif; }
+    .tour-welcome-card { background:#fff; border-radius:18px; padding:38px 36px; max-width:480px; width:100%; text-align:center; box-shadow:0 26px 80px rgba(20,10,30,.36); font-family:'Inter',Arial,sans-serif; }
     .tour-badge { display:inline-block; background:rgba(245,130,32,.12); color:#F58220; font-size:11px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; padding:5px 15px; border-radius:20px; margin-bottom:18px; }
     .tour-welcome-card h2 { font-size:23px; font-weight:700; color:#3D0C4B; margin:0 0 10px; }
     .tour-welcome-card p { font-size:14px; color:#5A6577; line-height:1.7; margin:0 0 26px; }
-    .tour-welcome-actions { display:flex; gap:12px; justify-content:center; }
-    @media (max-width:768px) { .tour-card { width:calc(100vw - 32px); left:16px !important; } }
+    .tour-welcome-actions { display:flex; gap:12px; justify-content:center; flex-wrap:wrap; }
+
+    @media (max-width:768px) {
+      .tour-card { width:calc(100vw - 32px); left:16px !important; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .tour-ring, .tour-card { transition:none; }
+      .tour-spin { animation:none; }
+    }
   </style>
 
   <script>
   (function() {
-    var PASOS = {
+
+    // ============================================
+    // MOTOR DE TOURS
+    // Cada paso: { sel, pos, t, d, antes(done), espera }
+    //   sel    selector del elemento a resaltar
+    //   pos    'right' | 'below' | 'above'  (posicion de la tarjeta)
+    //   antes  accion previa asincrona (cambiar de tab, cargar vista)
+    //   espera selector que debe existir antes de posicionar
+    // ============================================
+    var T = { pasos: [], i: 0, ring: null, card: null, activo: false, alCerrar: null };
+
+    function esperarElemento(sel, timeout, cb) {
+      if (!sel) return cb(true);
+      var t0 = Date.now();
+      (function poll() {
+        var el = document.querySelector(sel);
+        if (el && el.getBoundingClientRect().width > 0) return cb(true);
+        if (Date.now() - t0 > (timeout || 6000)) return cb(false);
+        setTimeout(poll, 120);
+      })();
+    }
+
+    function aVista(el, cb) {
+      var r = el.getBoundingClientRect();
+      var margen = 120;
+      var fuera = r.top < margen || r.bottom > window.innerHeight - margen;
+      if (!fuera) return cb();
+
+      try { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+      catch (e) { el.scrollIntoView(); }
+
+      // El anillo se dibuja con coordenadas de viewport, asi que hay que esperar
+      // a que el scroll suave termine de verdad; medir antes lo deja desalineado.
+      // Se usa setTimeout y no requestAnimationFrame: este ultimo no corre
+      // cuando la pestana esta en segundo plano y dejaria el tour trabado.
+      var ultima = null, quietos = 0, t0 = Date.now();
+      (function esperarScroll() {
+        var y = window.scrollY;
+        quietos = (y === ultima) ? quietos + 1 : 0;
+        ultima = y;
+        if (quietos >= 3 || Date.now() - t0 > 1200) return cb();
+        setTimeout(esperarScroll, 50);
+      })();
+    }
+
+    function cargando(texto) {
+      if (!T.card) return;
+      T.card.innerHTML =
+        '<div class="tour-step">Un momento</div>' +
+        '<div class="tour-loading"><div class="tour-spin"></div><span>' + (texto || 'Cargando...') + '</span></div>';
+    }
+
+    function iniciar(pasos, alCerrar) {
+      if (T.activo) cerrar();
+      T.pasos = pasos; T.i = 0; T.activo = true; T.alCerrar = alCerrar || null;
+
+      T.ring = document.createElement('div');
+      T.ring.className = 'tour-ring';
+      T.card = document.createElement('div');
+      T.card.className = 'tour-card';
+      document.body.appendChild(T.ring);
+      document.body.appendChild(T.card);
+
+      document.addEventListener('keydown', onTecla);
+      mostrar();
+    }
+
+    function onTecla(e) {
+      if (!T.activo) return;
+      if (e.key === 'Escape') cerrar();
+      else if (e.key === 'ArrowRight' || e.key === 'Enter') siguiente();
+    }
+
+    function mostrar() {
+      if (!T.activo) return;
+      if (T.i >= T.pasos.length) return cerrar();
+      var p = T.pasos[T.i];
+      T.ocupado = true;
+      // Seguro: si algo se cuelga preparando el paso, el boton Siguiente
+      // vuelve a habilitarse en vez de dejar el recorrido bloqueado.
+      clearTimeout(T.tSeguro);
+      T.tSeguro = setTimeout(function() { T.ocupado = false; }, 10000);
+
+      // Mientras prepara el paso, la tarjeta queda donde esta con un estado de carga
+      if (p.antes) {
+        cargando(p.cargando || 'Preparando la siguiente sección...');
+        p.antes(function() {
+          esperarElemento(p.espera || p.sel, 9000, function() { ubicar(p); });
+        });
+      } else {
+        esperarElemento(p.espera || p.sel, 9000, function() { ubicar(p); });
+      }
+    }
+
+    function ubicar(p) {
+      if (!T.activo) return;
+      var el = document.querySelector(p.sel);
+      // Si tras la espera el elemento sigue sin aparecer (vista recargando,
+      // programa sin datos), se omite el paso en vez de dejar el tour colgado.
+      if (!el) {
+        console.warn('[Tour] Se omite un paso: no se encontro', p.sel);
+        T.i++; return mostrar();
+      }
+
+      aVista(el, function() {
+        if (!T.activo) return;
+        var r = el.getBoundingClientRect();
+        var alto = p.maxAlto ? Math.min(r.height, p.maxAlto) : r.height;
+
+        T.ring.style.top = (r.top - 5) + 'px';
+        T.ring.style.left = (r.left - 5) + 'px';
+        T.ring.style.width = (r.width + 10) + 'px';
+        T.ring.style.height = (alto + 10) + 'px';
+
+        T.ocupado = false;
+        clearTimeout(T.tSeguro);
+        pintarTarjeta(p, r, alto);
+      });
+    }
+
+    function pintarTarjeta(p, r, alto) {
+      var total = T.pasos.length, idx = T.i;
+      var dots = '';
+      for (var k = 0; k < total; k++) {
+        dots += '<div class="tour-dot ' + (k < idx ? 'done' : (k === idx ? 'on' : '')) + '"></div>';
+      }
+      var ultimo = idx === total - 1;
+
+      T.card.innerHTML =
+        '<div class="tour-step">Paso ' + (idx + 1) + ' de ' + total + '</div>' +
+        '<h4>' + p.t + '</h4>' +
+        '<p>' + p.d + '</p>' +
+        '<div class="tour-actions">' +
+          '<div class="tour-dots">' + dots + '</div>' +
+          (ultimo
+            ? '<button class="tour-btn tour-btn-main" data-tour="fin">Finalizar</button>'
+            : '<button class="tour-btn tour-btn-ghost" data-tour="salir">Salir</button>' +
+              '<button class="tour-btn tour-btn-main" data-tour="sig">Siguiente</button>') +
+        '</div>';
+
+      T.card.querySelectorAll('[data-tour]').forEach(function(b) {
+        b.addEventListener('click', function() {
+          if (b.dataset.tour === 'sig') siguiente(); else cerrar();
+        });
+      });
+
+      // Colocar la tarjeta evitando tapar el elemento resaltado
+      var cw = T.card.offsetWidth || 350;
+      var ch = T.card.offsetHeight || 200;
+      var gap = 16, m = 12;
+      var left, top;
+
+      if (p.pos === 'right' && r.right + gap + cw < window.innerWidth - m) {
+        left = r.right + gap; top = r.top - 6;
+      } else if (p.pos === 'above' && r.top - gap - ch > m) {
+        left = r.left; top = r.top - gap - ch;
+      } else if (r.bottom + gap + ch < window.innerHeight - m) {
+        left = r.left; top = r.bottom + gap;           // debajo
+      } else if (r.top - gap - ch > m) {
+        left = r.left; top = r.top - gap - ch;         // encima
+      } else if (r.right + gap + cw < window.innerWidth - m) {
+        left = r.right + gap; top = m;                 // a la derecha
+      } else {
+        left = window.innerWidth - cw - m; top = m;    // ultimo recurso
+      }
+
+      if (left + cw > window.innerWidth - m) left = window.innerWidth - cw - m;
+      if (left < m) left = m;
+      if (top + ch > window.innerHeight - m) top = window.innerHeight - ch - m;
+      if (top < m) top = m;
+
+      T.card.style.left = Math.round(left) + 'px';
+      T.card.style.top = Math.round(top) + 'px';
+    }
+
+    // Se ignora el avance mientras el paso actual todavia se esta preparando:
+    // asi un doble clic impaciente no saltea secciones del recorrido.
+    function siguiente() {
+      if (T.ocupado) return;
+      T.i++; mostrar();
+    }
+
+    function cerrar() {
+      T.activo = false;
+      document.removeEventListener('keydown', onTecla);
+      [T.ring, T.card].forEach(function(el) { if (el && el.parentNode) el.remove(); });
+      T.ring = T.card = null;
+      sessionStorage.removeItem('tpt_demo_tour');
+      if (typeof T.alCerrar === 'function') { var f = T.alCerrar; T.alCerrar = null; f(); }
+    }
+
+    window.tourCerrar = cerrar;
+    window.tourSiguiente = siguiente;
+
+    // ============================================
+    // TOUR 1 — RECORRIDO POR ROL
+    // ============================================
+    function irAVista(id) {
+      return function(done) {
+        if (typeof cargarVista === 'function') cargarVista(id);
+        setTimeout(done, 500);
+      };
+    }
+
+    var PASOS_ROL = {
       admin: [
         { sel:'#sidebar', pos:'right', t:'Menú de administración',
           d:'Desde aquí gestionas clientes, programas, usuarios e incidencias. El menú se arma según el rol de cada persona.' },
-        { sel:'[data-vista="dashboard"]', pos:'right', vista:'dashboard', t:'Dashboard del programa',
-          d:'Indicadores en vivo: participantes, tasa de respuesta y nivel de adopción, con el comparativo PRE vs POST por competencia.' },
-        { sel:'[data-vista="programas"]', pos:'right', vista:'programas', t:'Gestión de programas',
-          d:'Cada programa tiene su panel con participantes, competencias, encuestas, cronograma e informes. Entra a uno para verlo.' },
-        { sel:'[data-vista="usuarios"]', pos:'right', vista:'usuarios', t:'Usuarios',
+        { sel:'[data-vista="dashboard"]', pos:'right', antes:irAVista('dashboard'), espera:'#content-area select', t:'Dashboard del programa',
+          d:'Indicadores en vivo: participantes, tasa de respuesta y nivel de adopción, con el comparativo inicial vs final por competencia.' },
+        { sel:'[data-vista="programas"]', pos:'right', antes:irAVista('programas'), t:'Gestión de programas',
+          d:'El módulo más completo de la plataforma. Al entrar a un programa encontrarás un botón <strong>Recorrer este módulo</strong> con un tutorial dedicado.' },
+        { sel:'[data-vista="usuarios"]', pos:'right', antes:irAVista('usuarios'), t:'Usuarios',
           d:'Alta de líderes y colaboradores, asignación de jefatura directa y control de acceso.' },
-        { sel:'[data-vista="gestion-observaciones"]', pos:'right', vista:'gestion-observaciones', t:'Incidencias',
+        { sel:'[data-vista="gestion-observaciones"]', pos:'right', antes:irAVista('gestion-observaciones'), t:'Incidencias',
           d:'Las consultas y problemas que reportan los participantes llegan acá para su seguimiento y cierre.' },
-        { sel:'#content-area', pos:'below', t:'Explora con libertad',
-          d:'Ya conoces lo esencial. Todo lo que hagas se guarda en tu navegador; puedes restaurar los datos originales cuando quieras.' }
+        { sel:'#content-area', pos:'above', maxAlto:220, t:'Explora con libertad',
+          d:'Ya conoces lo esencial. Todo lo que hagas se guarda en tu navegador y puedes restaurar los datos originales cuando quieras.' }
       ],
       jefatura: [
         { sel:'#sidebar', pos:'right', t:'Tu espacio como líder',
-          d:'Como jefatura te evalúas a ti y recibes la mirada de tu equipo. Este es el modelo 360 del programa.' },
-        { sel:'[data-vista="mi-programa"]', pos:'right', vista:'mi-programa', t:'Mi Programa',
+          d:'Como jefatura te evalúas a ti y recibes la mirada de tu equipo. Ese es el modelo 360 del programa.' },
+        { sel:'[data-vista="mi-programa"]', pos:'right', antes:irAVista('mi-programa'), t:'Mi Programa',
           d:'El estado de tu programa: en qué etapa estás, qué se viene y qué tienes pendiente.' },
-        { sel:'[data-vista="mis-encuestas"]', pos:'right', vista:'mis-encuestas', t:'Mis Evaluaciones',
+        { sel:'[data-vista="mis-encuestas"]', pos:'right', antes:irAVista('mis-encuestas'), t:'Mis Evaluaciones',
           d:'Acá completas tu autoevaluación en cada competencia. Se guarda a medida que respondes.' },
-        { sel:'[data-vista="mi-equipo"]', pos:'right', vista:'mi-equipo', t:'Mi Equipo',
+        { sel:'[data-vista="mi-equipo"]', pos:'right', antes:irAVista('mi-equipo'), t:'Mi Equipo',
           d:'Las personas que te reportan y que responden tu coevaluación. Sus respuestas son confidenciales y se reportan agregadas.' },
-        { sel:'[data-vista="mi-informe"]', pos:'right', vista:'mi-informe', t:'Mi Informe',
-          d:'Tu informe individual: cómo te ves tú, cómo te ve tu equipo, y la brecha entre ambas miradas.' },
-        { sel:'#content-area', pos:'below', t:'Todo listo',
+        { sel:'[data-vista="mi-informe"]', pos:'right', antes:irAVista('mi-informe'), t:'Mi Informe',
+          d:'Tu informe individual: cómo te ves tú, cómo te ve tu equipo, y la brecha entre ambas miradas.',
+          cargando:'Generando tu informe...' },
+        { sel:'#content-area', pos:'above', maxAlto:220, t:'Todo listo',
           d:'Ese es el recorrido de una jefatura en el programa. Puedes seguir explorando por tu cuenta.' }
       ],
       participante: [
         { sel:'#sidebar', pos:'right', t:'Tu espacio de colaborador',
           d:'Como colaborador, tu rol es evaluar a tu jefatura directa. Tus respuestas son confidenciales.' },
-        { sel:'[data-vista="mi-programa"]', pos:'right', vista:'mi-programa', t:'Mi Programa',
+        { sel:'[data-vista="mi-programa"]', pos:'right', antes:irAVista('mi-programa'), t:'Mi Programa',
           d:'El estado del programa en el que participas y las etapas que se vienen.' },
-        { sel:'[data-vista="mis-encuestas"]', pos:'right', vista:'mis-encuestas', t:'Mis Encuestas',
+        { sel:'[data-vista="mis-encuestas"]', pos:'right', antes:irAVista('mis-encuestas'), t:'Mis Encuestas',
           d:'Acá evalúas a tu jefatura en cada competencia, eligiendo el nivel que mejor describe lo que observas en el día a día.' },
-        { sel:'[data-vista="mis-recursos"]', pos:'right', vista:'mis-recursos', t:'Archivos y Recursos',
+        { sel:'[data-vista="mis-recursos"]', pos:'right', antes:irAVista('mis-recursos'), t:'Archivos y Recursos',
           d:'El material del programa: guías, presentaciones de los talleres y bitácoras de práctica.' },
-        { sel:'#content-area', pos:'below', t:'Listo para explorar',
+        { sel:'#content-area', pos:'above', maxAlto:220, t:'Listo para explorar',
           d:'Ese es el recorrido de un colaborador. Sigue navegando con el menú lateral.' }
       ]
     };
 
-    var paso = 0, rol = null, backdrop, ring, card;
+    // ============================================
+    // TOUR 2 — MODULO DE PROGRAMAS (detallado)
+    // ============================================
+    function irATab(nombre) {
+      return function(done) {
+        if (typeof switchTab === 'function') switchTab(nombre, function() { setTimeout(done, 250); });
+        else done();
+      };
+    }
 
-    function bienvenida(r) {
+    var PASOS_PROGRAMA = [
+      { sel:'#panel-tabs-bar', pos:'below', t:'Ocho secciones, un programa',
+        d:'Todo lo que define un programa vive acá: su ficha, las competencias que mide, quién participa, las encuestas, el cronograma y los informes. Recorramos cada una.',
+        antes:irATab('resumen'), espera:'#resumen-programa-info' },
+
+      { sel:'#resumen-programa-info', pos:'below', t:'1. Resumen — la ficha del programa',
+        d:'Nombre, cliente, fechas y objetivo. <strong>Todos los campos se editan haciendo clic sobre ellos</strong>, sin abrir formularios ni pantallas aparte.' },
+
+      { sel:'#resumen-kpis-container', pos:'below', t:'Avance en cinco números',
+        d:'Cuántos líderes y colaboradores hay, y cuántas evaluaciones se completaron. Es el primer lugar donde mirar para saber si el programa avanza.' },
+
+      { sel:'#tbody-resumen-evaluaciones', pos:'above', maxAlto:260, t:'Quién respondió y quién no',
+        d:'Una fila por persona con sus cuatro evaluaciones: autoevaluación y coevaluación, inicial y final. Acá se ve de inmediato a quién hay que recordarle.' },
+
+      { sel:'#lista-competencias', pos:'below', t:'2. Competencias — qué se mide',
+        d:'Cada competencia define <strong>cuatro niveles descritos en lenguaje observable</strong>, del nivel 1 al 4. Esa redacción es la que verá el participante al responder.',
+        antes:irATab('competencias'), espera:'#lista-competencias .competencia-card',
+        cargando:'Cargando competencias...' },
+
+      { sel:'#tbody-participantes-panel', pos:'above', maxAlto:280, t:'3. Participantes — quién evalúa a quién',
+        d:'Cada líder aparece junto a los colaboradores que lo evalúan. <strong>Esa relación es la que hace posible el 360</strong>: sin ella no hay con quién contrastar la autoevaluación.',
+        antes:irATab('participantes'), espera:'#tbody-participantes-panel tr',
+        cargando:'Cargando participantes...' },
+
+      { sel:'#btn-recordar-lideres', pos:'below', t:'Recordatorios en un clic',
+        d:'El contador muestra cuántas personas siguen pendientes. El botón les envía el recordatorio por correo sin salir de esta pantalla.' },
+
+      { sel:'#encuestas-prog-grid', pos:'below', t:'4. Encuestas — la matriz del 360',
+        d:'Cuatro encuestas: autoevaluación y coevaluación, cada una en su medición inicial y final. <strong>El cruce de esas cuatro es lo que produce la brecha</strong> entre cómo se ve el líder y cómo lo ve su equipo.',
+        antes:irATab('encuestas'), espera:'#encuestas-prog-grid .encuesta-slot',
+        cargando:'Cargando encuestas...' },
+
+      { sel:'#lista-archivos-programa', pos:'below', t:'5. Actividades y Recursos',
+        d:'El material que reciben los participantes: guías, presentaciones y enlaces externos. Cada archivo se puede ocultar o mostrar según la etapa del programa.',
+        antes:irATab('cronograma'), cargando:'Cargando recursos...' },
+
+      { sel:'#gantt-content', pos:'above', maxAlto:300, t:'6. Carta Gantt — el programa en el tiempo',
+        d:'Los hitos ordenados por fase, desde el kick off hasta la entrega del informe final. Se pueden crear a mano o <strong>cargar masivamente desde Excel</strong>.',
+        antes:irATab('gantt'), cargando:'Cargando cronograma...' },
+
+      { sel:'#tbody-seguimiento-lideres', pos:'above', maxAlto:240, t:'7. Seguimiento — qué pasa entre talleres',
+        d:'El programa no vive solo en el aula. Acá se registra la actividad de cada líder entre sesiones: observaciones en terreno y feedback entregado a su equipo.',
+        antes:irATab('seguimiento'), cargando:'Cargando seguimiento...' },
+
+      { sel:'#informes-disponibilidad', pos:'below', t:'8. Informes — primero, qué hay disponible',
+        d:'Antes de generar nada, la plataforma muestra el estado de las cuatro encuestas y la cobertura alcanzada. <strong>Un informe con pocas respuestas no es confiable</strong>, y esto lo deja a la vista.',
+        antes:irATab('informes'), espera:'#informes-disponibilidad-grid',
+        cargando:'Cargando estado de informes...' },
+
+      { sel:'#grid-informes-finales', pos:'below', t:'Informes individuales y consolidados',
+        d:'Cada tarjeta genera un informe distinto: el <strong>individual</strong> es la devolución para un líder; el <strong>consolidado</strong> es la lectura del grupo para presentar al cliente. Ambos con análisis narrativo y descarga en PDF.' },
+
+      { sel:'#card-brechas', pos:'above', t:'El informe que cierra el programa',
+        d:'Compara la medición inicial con la final: qué competencias mejoraron, cuánto se acortó la brecha entre ambas miradas y qué quedó pendiente. <strong>Es la evidencia de impacto</strong> que justifica la inversión.' }
+    ];
+
+    // ============================================
+    // ARRANQUE
+    // ============================================
+    function bienvenida(rol) {
       var titulos = { admin:'Administrador', jefatura:'Jefatura', participante:'Colaborador' };
       var textos = {
         admin:'Verás el panel de administración completo: dashboard con indicadores, gestión de programas, usuarios e informes.',
@@ -2002,114 +2292,50 @@ function _ejecutarConfirmacion() {
       el.id = 'tour-welcome';
       el.innerHTML =
         '<div class="tour-welcome-card">' +
-          '<div class="tour-badge">' + titulos[r] + '</div>' +
+          '<div class="tour-badge">' + titulos[rol] + '</div>' +
           '<h2>Bienvenido a la demo</h2>' +
-          '<p>' + textos[r] + ' Te mostramos lo esencial en un recorrido corto.</p>' +
+          '<p>' + textos[rol] + ' Te mostramos lo esencial en un recorrido corto.</p>' +
           '<div class="tour-welcome-actions">' +
-            '<button class="tour-btn tour-btn-ghost" onclick="tourSaltar()">Explorar por mi cuenta</button>' +
-            '<button class="tour-btn tour-btn-main" onclick="tourIniciar()">Comenzar recorrido</button>' +
+            '<button class="tour-btn tour-btn-ghost" data-w="no">Explorar por mi cuenta</button>' +
+            '<button class="tour-btn tour-btn-main" data-w="si">Comenzar recorrido</button>' +
           '</div>' +
         '</div>';
       document.body.appendChild(el);
+      el.querySelector('[data-w="no"]').addEventListener('click', function() {
+        el.remove(); sessionStorage.removeItem('tpt_demo_tour');
+      });
+      el.querySelector('[data-w="si"]').addEventListener('click', function() {
+        el.remove(); iniciar(PASOS_ROL[rol]);
+      });
     }
 
-    window.tourSaltar = function() {
-      var w = document.getElementById('tour-welcome');
-      if (w) w.remove();
-      sessionStorage.removeItem('tpt_demo_tour');
-    };
-
-    window.tourIniciar = function() {
-      var w = document.getElementById('tour-welcome');
-      if (w) w.remove();
-      backdrop = document.createElement('div'); backdrop.className = 'tour-backdrop';
-      ring = document.createElement('div'); ring.className = 'tour-ring';
-      card = document.createElement('div'); card.className = 'tour-card';
-      document.body.appendChild(backdrop);
-      document.body.appendChild(ring);
-      document.body.appendChild(card);
-      paso = 0;
-      mostrar();
-    };
-
-    window.tourSiguiente = function() { paso++; mostrar(); };
-
-    window.tourCerrar = function() {
-      sessionStorage.removeItem('tpt_demo_tour');
-      [backdrop, ring, card].forEach(function(el) { if (el && el.parentNode) el.remove(); });
-    };
-
-    function mostrar() {
-      var pasos = PASOS[rol];
-      if (!pasos || paso >= pasos.length) return tourCerrar();
-      var p = pasos[paso];
-      if (p.vista && typeof cargarVista === 'function') {
-        cargarVista(p.vista);
-        setTimeout(function() { ubicar(p, pasos.length); }, 550);
-      } else {
-        ubicar(p, pasos.length);
+    // Tutorial del modulo de programas (boton "Recorrer este modulo")
+    window.iniciarTourPrograma = function() {
+      if (typeof switchTab !== 'function') {
+        console.warn('[Tour] El panel de programa no esta cargado.');
+        return;
       }
-    }
+      var btn = document.querySelector('.panel-tab.active');
+      var tabActual = btn ? btn.dataset.tab : null;
 
-    function ubicar(p, total) {
-      var el = document.querySelector(p.sel);
-      if (!el) { paso++; return mostrar(); }
-
-      var r = el.getBoundingClientRect();
-      var sy = window.scrollY || 0, sx = window.scrollX || 0;
-      var esContenido = p.sel === '#content-area';
-
-      var top = r.top + sy - 4, left = r.left + sx - 4;
-      var w = r.width + 8, h = r.height + 8;
-      if (esContenido) { h = Math.min(h, 260); }
-
-      ring.style.top = top + 'px';
-      ring.style.left = left + 'px';
-      ring.style.width = w + 'px';
-      ring.style.height = h + 'px';
-
-      var dots = '';
-      for (var i = 0; i < total; i++) {
-        dots += '<div class="tour-dot ' + (i < paso ? 'done' : (i === paso ? 'on' : '')) + '"></div>';
-      }
-      var ultimo = paso === total - 1;
-      card.innerHTML =
-        '<div class="tour-step">Paso ' + (paso + 1) + ' de ' + total + '</div>' +
-        '<h4>' + p.t + '</h4>' +
-        '<p>' + p.d + '</p>' +
-        '<div class="tour-actions">' +
-          '<div class="tour-dots">' + dots + '</div>' +
-          (ultimo
-            ? '<button class="tour-btn tour-btn-main" onclick="tourCerrar()">Finalizar</button>'
-            : '<button class="tour-btn tour-btn-ghost" onclick="tourCerrar()">Salir</button>' +
-              '<button class="tour-btn tour-btn-main" onclick="tourSiguiente()">Siguiente</button>') +
-        '</div>';
-
-      var cw = 340, ch = card.offsetHeight || 200, gap = 18;
-      var ct, cl;
-      if (p.pos === 'right') {
-        cl = r.right + sx + gap;
-        ct = r.top + sy - 8;
-      } else {
-        cl = r.left + sx + 28;
-        ct = r.top + sy + 40;
-      }
-      if (cl + cw > window.innerWidth - 12) cl = window.innerWidth - cw - 12;
-      if (cl < 12) cl = 12;
-      var maxTop = sy + window.innerHeight - ch - 16;
-      if (ct > maxTop) ct = maxTop;
-      if (ct < sy + 12) ct = sy + 12;
-      card.style.left = cl + 'px';
-      card.style.top = ct + 'px';
-    }
+      // Si la pestana todavia se esta cargando, se espera: arrancar sobre un
+      // DOM a medio construir hace que los primeros pasos no encuentren su elemento.
+      esperarElemento('#panel-tab-content .card-body', 6000, function() {
+        // Al terminar, volver a la pestana en la que estaba el usuario
+        iniciar(PASOS_PROGRAMA, function() {
+          if (tabActual && tabActual !== 'informes') switchTab(tabActual);
+        });
+      });
+    };
 
     document.addEventListener('DOMContentLoaded', function() {
       setTimeout(function() {
         var r = sessionStorage.getItem('tpt_demo_tour');
         if (r === 'colaborador') r = 'participante';
-        if (r && PASOS[r]) { rol = r; bienvenida(r); }
+        if (r && PASOS_ROL[r]) bienvenida(r);
       }, 1100);
     });
+
   })();
   </script>
 </body>
